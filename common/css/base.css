@@ -1,0 +1,127 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: clamp(6px, 1.5vmin, 16px);
+}
+
+#app {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: clamp(10px, 2vmin, 20px);
+    font-size: clamp(1.8rem, 5vmin, 2.5rem);
+}
+
+button {
+    padding: clamp(8px, 1.8vmin, 12px) clamp(14px, 3vmin, 25px);
+    font-size: clamp(14px, 2.2vmin, 16px);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: bold;
+}
+
+.btn-primary {
+    background: #2196f3;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1976d2;
+    transform: translateY(-2px);
+}
+
+.btn-warning {
+    background: #ff9800;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #f57c00;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #eef2f7;
+    color: #445;
+}
+
+.btn-secondary:hover {
+    background: #dfe7f0;
+    transform: translateY(-2px);
+}
+
+select {
+    padding: clamp(7px, 1.6vmin, 10px) clamp(10px, 2.4vmin, 15px);
+    font-size: clamp(14px, 2.2vmin, 16px);
+    border: 2px solid #2196f3;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: clamp(24px, 5vmin, 40px);
+    border-radius: 20px;
+    text-align: center;
+    animation: popIn 0.3s;
+    max-width: min(420px, 100%);
+}
+
+@keyframes popIn {
+    from {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modal h2 {
+    color: #4caf50;
+    font-size: clamp(1.5rem, 5vmin, 2rem);
+    margin-bottom: 20px;
+}
+
+.modal p {
+    font-size: clamp(1rem, 2.8vmin, 1.2rem);
+    margin: 10px 0;
+    color: #555;
+}
