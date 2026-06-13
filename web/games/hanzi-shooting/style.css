@@ -131,9 +131,103 @@
     animation: timePulse 0.5s ease-in-out infinite alternate;
 }
 
+.shooting-stats .stat-value.mistakes {
+    color: #ff8a80;
+}
+
+.shooting-stats .stat-value.mistakes.warning {
+    animation: timePulse 0.5s ease-in-out infinite alternate;
+}
+
 @keyframes timePulse {
     from { color: #ef5350; transform: scale(1); }
     to   { color: #ff8a80; transform: scale(1.15); }
+}
+
+/* ========== 错题卡槽（无时间限制模式） ========== */
+
+.shooting-mistake-slots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(4px, 1.5vw, 8px);
+    padding: 6px 8px;
+    background: rgba(10, 10, 46, 0.5);
+    z-index: 10;
+    border-bottom: 1px solid rgba(255, 138, 128, 0.15);
+    flex-wrap: nowrap;
+}
+
+.mistake-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 60px;
+    height: 50px;
+    padding: 2px 4px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: all 0.2s;
+}
+
+.mistake-slot.empty {
+    border: 2px dashed rgba(255, 255, 255, 0.18);
+    background: rgba(20, 30, 80, 0.3);
+}
+
+.mistake-slot.filled {
+    border: 2px solid rgba(239, 83, 80, 0.7);
+    background: rgba(80, 20, 30, 0.55);
+    box-shadow: 0 0 10px rgba(239, 83, 80, 0.3);
+    animation: mistakePopIn 0.35s ease-out;
+}
+
+.mistake-slot .mistake-hanzi {
+    font-size: clamp(15px, 4vw, 22px);
+    font-weight: bold;
+    color: #fff;
+    line-height: 1.1;
+    text-shadow: 0 0 6px rgba(239, 83, 80, 0.5);
+}
+
+.mistake-slot .mistake-pinyin {
+    font-size: clamp(9px, 2.2vw, 11px);
+    color: #ffb3b0;
+    line-height: 1.1;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+@keyframes mistakePopIn {
+    0%   { transform: scale(0.4); opacity: 0; }
+    60%  { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 结算面板里的错题回顾 */
+.shooting-gameover-card .mistake-recap {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(100, 180, 255, 0.1);
+}
+
+.shooting-gameover-card .mistake-recap-label {
+    color: #7aa8d4;
+    font-size: clamp(12px, 2.8vw, 14px);
+    margin-bottom: 6px;
+}
+
+.shooting-gameover-card .shooting-mistake-slots.recap {
+    background: transparent;
+    border: none;
+    padding: 0;
+    gap: 6px;
 }
 
 /* ========== 目标区 ========== */
@@ -388,6 +482,17 @@
     box-shadow: 0 0 16px rgba(178, 136, 255, 0.3);
 }
 
+.shooting-start .mode-btn-endless {
+    border-color: rgba(105, 240, 174, 0.5);
+    background: rgba(20, 80, 60, 0.5);
+}
+
+.shooting-start .mode-btn-endless:hover {
+    background: rgba(0, 150, 136, 0.3);
+    border-color: rgba(105, 240, 174, 0.8);
+    box-shadow: 0 0 16px rgba(105, 240, 174, 0.3);
+}
+
 .shooting-start .mode-btn-back {
     border-color: rgba(255, 255, 255, 0.15);
     background: rgba(255, 255, 255, 0.05);
@@ -594,6 +699,23 @@
     .shooting-target-item {
         font-size: 15px;
         padding: 2px 8px;
+    }
+
+    .shooting-mistake-slots {
+        padding: 4px 6px;
+        gap: 4px;
+    }
+
+    .mistake-slot {
+        height: 44px;
+    }
+
+    .mistake-slot .mistake-hanzi {
+        font-size: 16px;
+    }
+
+    .mistake-slot .mistake-pinyin {
+        font-size: 9px;
     }
 
     .shooting-header {

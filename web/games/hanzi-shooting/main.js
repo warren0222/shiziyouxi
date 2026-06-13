@@ -1,7 +1,7 @@
 function createShootingGame({ root, onBack }) {
     /* ===== 状态 ===== */
     let mounted = false;
-    let mode = ""; // "pinyin-to-hanzi" | "hanzi-to-pinyin" | "mixed"
+    let mode = ""; // "pinyin-to-hanzi" | "hanzi-to-pinyin" | "mixed" | "endless"
     let targetCount = 1; // 玩家选择的难度：1/2/3 个目标
     let score = 0;
     let combo = 0;
@@ -17,12 +17,14 @@ function createShootingGame({ root, onBack }) {
     let fallDuration = 5;
     let starElements = [];
     let audioCtx = null;
+    let mistakes = []; // 仅 endless 模式：[{hanzi, pinyin}]
 
     const TOTAL_TIME = 60;
     const HITS_PER_LEVEL = 10;
     const BASE_SPAWN_INTERVAL = 900;
     const MIN_SPAWN_INTERVAL = 350;
     const MIN_FALL_DURATION = 2.2;
+    const MAX_MISTAKES = 5;
 
     /* ===== 音效系统（Web Audio API，非汉字读音） ===== */
 
@@ -103,7 +105,8 @@ function createShootingGame({ root, onBack }) {
     }
 
     function getStorageKey() {
-        return `shooting_highscore_${targetCount}`;
+        const prefix = mode === "endless" ? "shooting_endless" : "shooting";
+        return `${prefix}_highscore_${targetCount}`;
     }
 
     function loadHighScore() {
@@ -142,6 +145,8 @@ function createShootingGame({ root, onBack }) {
     /* ===== 渲染函数 ===== */
 
     function renderStartScreen() {
+        // 回到起始界面时清空 mode，使最高分显示走默认（非 endless）storage key
+        mode = "";
         highScore = loadHighScore();
 
         root.innerHTML = `
@@ -158,6 +163,9 @@ function createShootingGame({ root, onBack }) {
                         </button>
                         <button class="mode-btn mode-btn-mixed" data-mode="mixed">
                             🔀 混合模式
+                        </button>
+                        <button class="mode-btn mode-btn-endless" data-mode="endless">
+                            ⏳ 无时间限制
                         </button>
                     </div>
 
@@ -212,6 +220,21 @@ function createShootingGame({ root, onBack }) {
 
     function renderGameScreen() {
         const wrapper = root.querySelector("#shootingWrapper") || root.querySelector(".shooting-wrapper");
+        const isEndless = mode === "endless";
+        const timeOrChanceStat = isEndless
+            ? `<span class="stat-item">
+                    <span class="stat-label">机会</span>
+                    <span class="stat-value mistakes" id="shootingMistakes">0/${MAX_MISTAKES}</span>
+                </span>`
+            : `<span class="stat-item">
+                    <span class="stat-label">时间</span>
+                    <span class="stat-value time" id="shootingTime">${TOTAL_TIME}s</span>
+                </span>`;
+
+        const slotsRow = isEndless
+            ? `<div class="shooting-mistake-slots" id="shootingMistakeSlots"></div>`
+            : "";
+
         wrapper.innerHTML = `
             <div class="shooting-header">
                 <button class="btn-back" id="shootingBack">← 返回</button>
@@ -232,15 +255,14 @@ function createShootingGame({ root, onBack }) {
                     <span class="stat-label">等级</span>
                     <span class="stat-value" id="shootingLevel">1</span>
                 </span>
-                <span class="stat-item">
-                    <span class="stat-label">时间</span>
-                    <span class="stat-value time" id="shootingTime">${TOTAL_TIME}s</span>
-                </span>
+                ${timeOrChanceStat}
                 <span class="stat-item">
                     <span class="stat-label">最高</span>
                     <span class="stat-value highscore" id="shootingHighScore">${highScore}</span>
                 </span>
             </div>
+
+            ${slotsRow}
 
             <div class="shooting-targets" id="shootingTargets">
                 <span class="shooting-target-label">目标：</span>
@@ -266,6 +288,10 @@ function createShootingGame({ root, onBack }) {
         });
 
         root.querySelector("#shootingPlayArea").addEventListener("pointerdown", onPlayAreaClick);
+
+        if (mode === "endless") {
+            renderMistakeSlots();
+        }
 
         generateStars();
     }
@@ -301,27 +327,33 @@ function createShootingGame({ root, onBack }) {
         combo = 0;
         level = 1;
         correctCount = 0;
-        timeLeft = TOTAL_TIME;
+        timeLeft = mode === "endless" ? Infinity : TOTAL_TIME;
         fallDuration = 5;
         fallingCards = [];
         targets = [];
+        mistakes = [];
         gameActive = true;
+
+        // 切换 mode 后再读取，使 endless 拥有独立 storage key
+        highScore = loadHighScore();
 
         renderGameScreen();
         pickTargets();
         updateUI();
 
-        timerInterval = setInterval(() => {
-            if (!mounted || !gameActive) return;
-            timeLeft--;
-            updateTimeDisplay();
-            if (timeLeft <= 5 && timeLeft > 0) {
-                playCountdownBeep();
-            }
-            if (timeLeft <= 0) {
-                endGame();
-            }
-        }, 1000);
+        if (mode !== "endless") {
+            timerInterval = setInterval(() => {
+                if (!mounted || !gameActive) return;
+                timeLeft--;
+                updateTimeDisplay();
+                if (timeLeft <= 5 && timeLeft > 0) {
+                    playCountdownBeep();
+                }
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
 
         scheduleSpawn();
     }
@@ -349,14 +381,14 @@ function createShootingGame({ root, onBack }) {
             } while (used.has(hanzi));
             used.add(hanzi);
 
-            // 混合模式下，每个目标随机决定显示汉字还是拼音
+            // 混合 / 无时间限制 模式下，每个目标随机决定显示汉字还是拼音
             let cardType;
             if (mode === "pinyin-to-hanzi") {
                 cardType = "show-pinyin"; // 目标显示拼音，下落汉字
             } else if (mode === "hanzi-to-pinyin") {
                 cardType = "show-hanzi"; // 目标显示汉字，下落拼音
             } else {
-                // 混合模式：随机
+                // mixed / endless：随机
                 cardType = Math.random() < 0.5 ? "show-pinyin" : "show-hanzi";
             }
 
@@ -571,6 +603,18 @@ function createShootingGame({ root, onBack }) {
         showFloatingText(cx, cy, "-5", "#ef5350");
 
         updateUI();
+
+        // 无时间限制模式：将错卡加入卡槽，满 5 个则失败
+        if (mode === "endless") {
+            const hanzi = cardEl.dataset.hanzi;
+            const pinyin = cardEl.dataset.pinyin || (PINYIN_MAP[hanzi] || "");
+            mistakes.push({ hanzi, pinyin });
+            renderMistakeSlots();
+            updateMistakeCounter();
+            if (mistakes.length >= MAX_MISTAKES) {
+                endGame();
+            }
+        }
     }
 
     function onCardFallOut(cardEl, hanzi) {
@@ -661,6 +705,36 @@ function createShootingGame({ root, onBack }) {
 
     /* ===== UI 更新 ===== */
 
+    function renderMistakeSlots() {
+        const c = root.querySelector("#shootingMistakeSlots");
+        if (!c) return;
+        c.innerHTML = "";
+        for (let i = 0; i < MAX_MISTAKES; i++) {
+            const m = mistakes[i];
+            const slot = document.createElement("div");
+            slot.className = "mistake-slot" + (m ? " filled" : " empty");
+            if (m) {
+                slot.innerHTML = `
+                    <span class="mistake-hanzi">${m.hanzi}</span>
+                    <span class="mistake-pinyin">${m.pinyin}</span>
+                `;
+            }
+            c.appendChild(slot);
+        }
+    }
+
+    function updateMistakeCounter() {
+        const el = root.querySelector("#shootingMistakes");
+        if (el) {
+            el.textContent = `${mistakes.length}/${MAX_MISTAKES}`;
+            if (mistakes.length >= MAX_MISTAKES - 1) {
+                el.classList.add("warning");
+            } else {
+                el.classList.remove("warning");
+            }
+        }
+    }
+
     function updateUI() {
         const scoreEl = root.querySelector("#shootingScore");
         const comboEl = root.querySelector("#shootingCombo");
@@ -712,15 +786,42 @@ function createShootingGame({ root, onBack }) {
 
         const modeLabel = mode === "pinyin-to-hanzi" ? "看拼音点汉字"
             : mode === "hanzi-to-pinyin" ? "看汉字点拼音"
+            : mode === "endless" ? "无时间限制"
             : "混合模式";
 
         const diffLabel = getDifficultyLabel();
+        const isEndless = mode === "endless";
+
+        const titleHtml = isEndless
+            ? `<h2>💔 机会用完了！</h2>`
+            : `<h2>⏰ 时间到！</h2>`;
+
+        const timeOrMistakeRow = isEndless
+            ? `<div class="result-row">
+                    <span class="result-label">错题数</span>
+                    <span class="result-value">${mistakes.length}/${MAX_MISTAKES}</span>
+                </div>`
+            : "";
+
+        const mistakeListHtml = isEndless && mistakes.length > 0
+            ? `<div class="mistake-recap">
+                    <div class="mistake-recap-label">错题回顾</div>
+                    <div class="shooting-mistake-slots recap">
+                        ${mistakes.map(m => `
+                            <div class="mistake-slot filled">
+                                <span class="mistake-hanzi">${m.hanzi}</span>
+                                <span class="mistake-pinyin">${m.pinyin}</span>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>`
+            : "";
 
         const overlay = document.createElement("div");
         overlay.className = "shooting-gameover";
         overlay.innerHTML = `
             <div class="shooting-gameover-card">
-                <h2>⏰ 时间到！</h2>
+                ${titleHtml}
                 <div class="result-row">
                     <span class="result-label">游戏模式</span>
                     <span class="result-value">${modeLabel}</span>
@@ -745,6 +846,8 @@ function createShootingGame({ root, onBack }) {
                     <span class="result-label">命中次数</span>
                     <span class="result-value">${correctCount}</span>
                 </div>
+                ${timeOrMistakeRow}
+                ${mistakeListHtml}
                 <div class="btn-group">
                     <button class="btn-primary" id="shootingRestart">再来一局</button>
                     <button class="btn-secondary" id="shootingChangeMode">换个模式</button>
