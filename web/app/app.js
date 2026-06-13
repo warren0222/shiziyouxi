@@ -9,6 +9,13 @@ const games = [
         description: "交换拼图块，还原目标汉字。完成后会自动读出这个字。",
         create: createPuzzleGame,
     },
+    {
+        id: "shooting",
+        icon: "🎯",
+        title: "汉字射击",
+        description: "看拼音或看汉字，点击匹配的下落卡片得分！",
+        create: createShootingGame,
+    },
 ];
 
 function stopCurrentGame() {

@@ -1,0 +1,606 @@
+/* ========== 汉字射击 — 全局容器 & 深空背景 ========== */
+
+.shooting-wrapper {
+    width: 100%;
+    height: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: linear-gradient(180deg, #0a0a2e 0%, #1a1a4e 40%, #0d0d35 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: #e0e0e0;
+    font-family: "Microsoft YaHei", "SimHei", "PingFang SC", "Hiragino Sans GB", "STHeiti", sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ========== 星空背景 ========== */
+
+.shooting-star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: #fff;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.9; }
+}
+
+/* ========== 顶部栏 ========== */
+
+.shooting-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(10, 10, 46, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 10;
+    border-bottom: 1px solid rgba(100, 180, 255, 0.15);
+}
+
+.shooting-header h1 {
+    font-size: clamp(14px, 3.8vw, 20px);
+    color: #a0cfff;
+    margin: 0;
+    text-shadow: 0 0 8px rgba(100, 180, 255, 0.4);
+}
+
+.shooting-header .btn-back {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #a0cfff;
+    font-size: clamp(12px, 3vw, 14px);
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.shooting-header .btn-back:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.shooting-header .header-spacer {
+    width: 60px;
+    flex-shrink: 0;
+}
+
+/* ========== 状态栏 ========== */
+
+.shooting-stats {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 2vw, 16px);
+    padding: 5px 8px;
+    background: rgba(10, 10, 46, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 10;
+    font-size: clamp(11px, 2.5vw, 14px);
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(100, 180, 255, 0.1);
+}
+
+.shooting-stats .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.shooting-stats .stat-label {
+    color: #7aa8d4;
+}
+
+.shooting-stats .stat-value {
+    color: #fff;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+}
+
+.shooting-stats .stat-value.combo {
+    color: #ffd740;
+    text-shadow: 0 0 6px rgba(255, 215, 64, 0.5);
+}
+
+.shooting-stats .stat-value.score {
+    color: #69f0ae;
+    text-shadow: 0 0 6px rgba(105, 240, 174, 0.4);
+}
+
+.shooting-stats .stat-value.highscore {
+    color: #ffab40;
+}
+
+.shooting-stats .stat-value.time {
+    color: #ef5350;
+}
+
+.shooting-stats .stat-value.time.warning {
+    animation: timePulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes timePulse {
+    from { color: #ef5350; transform: scale(1); }
+    to   { color: #ff8a80; transform: scale(1.15); }
+}
+
+/* ========== 目标区 ========== */
+
+.shooting-targets {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1.5vw, 12px);
+    padding: 6px 8px;
+    background: rgba(10, 10, 46, 0.5);
+    z-index: 10;
+    min-height: 44px;
+    border-bottom: 1px solid rgba(100, 180, 255, 0.1);
+    flex-wrap: wrap;
+}
+
+.shooting-target-label {
+    color: #7aa8d4;
+    font-size: clamp(11px, 2.5vw, 13px);
+    margin-right: 2px;
+}
+
+.shooting-target-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 10px;
+    background: rgba(33, 150, 243, 0.15);
+    border: 2px solid rgba(100, 180, 255, 0.5);
+    border-radius: 10px;
+    font-size: clamp(16px, 4.5vw, 26px);
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(100, 180, 255, 0.6);
+    box-shadow: 0 0 12px rgba(100, 180, 255, 0.3), inset 0 0 8px rgba(100, 180, 255, 0.1);
+    animation: targetPulse 2s ease-in-out infinite;
+    min-width: 40px;
+    text-align: center;
+}
+
+.shooting-target-item.hit {
+    border-color: #69f0ae;
+    color: #69f0ae;
+    text-shadow: 0 0 10px rgba(105, 240, 174, 0.6);
+    box-shadow: 0 0 12px rgba(105, 240, 174, 0.3);
+    animation: targetHit 0.4s ease-out;
+}
+
+@keyframes targetPulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(100, 180, 255, 0.3), inset 0 0 8px rgba(100, 180, 255, 0.1); }
+    50%      { box-shadow: 0 0 20px rgba(100, 180, 255, 0.5), inset 0 0 12px rgba(100, 180, 255, 0.2); }
+}
+
+@keyframes targetHit {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* ========== 游戏区域 ========== */
+
+.shooting-play-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: crosshair;
+    z-index: 5;
+}
+
+/* ========== 下落卡片 ========== */
+
+.shooting-char {
+    position: absolute;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(44px, 14vw, 64px);
+    height: clamp(44px, 14vw, 64px);
+    border-radius: 10px;
+    background: rgba(20, 30, 80, 0.8);
+    border: 2px solid rgba(100, 180, 255, 0.45);
+    color: #e3f2fd;
+    font-size: clamp(18px, 5vmin, 28px);
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 6;
+    animation: shootFall linear forwards;
+    pointer-events: auto;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 8px rgba(100, 180, 255, 0.2);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.shooting-char:active {
+    border-color: rgba(100, 180, 255, 0.8);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 14px rgba(100, 180, 255, 0.5);
+}
+
+.shooting-char.pinyin-card {
+    font-size: clamp(12px, 3vmin, 17px);
+    padding: 2px 5px;
+    width: auto;
+    min-width: clamp(44px, 14vw, 64px);
+}
+
+.shooting-char.wrong-click {
+    animation: shootShake 0.35s ease-in-out;
+    border-color: #ef5350 !important;
+    box-shadow: 0 0 16px rgba(239, 83, 80, 0.6) !important;
+}
+
+@keyframes shootFall {
+    from { transform: translateY(-80px); }
+    to   { transform: translateY(var(--fall-distance, 120vh)); }
+}
+
+@keyframes shootShake {
+    0%, 100% { transform: translateX(0); }
+    20%  { transform: translateX(-6px); }
+    40%  { transform: translateX(6px); }
+    60%  { transform: translateX(-4px); }
+    80%  { transform: translateX(4px); }
+}
+
+/* ========== 命中粒子爆炸 ========== */
+
+.shooting-particle {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 20;
+    animation: shootExplode 0.45s ease-out forwards;
+}
+
+@keyframes shootExplode {
+    0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); }
+}
+
+/* ========== 浮动文字 ========== */
+
+.shooting-float-text {
+    position: absolute;
+    pointer-events: none;
+    z-index: 20;
+    font-size: clamp(14px, 3.5vw, 20px);
+    font-weight: bold;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    animation: shootFloatUp 0.8s ease-out forwards;
+}
+
+@keyframes shootFloatUp {
+    0%   { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-50px); }
+}
+
+/* ========== 升级提示 ========== */
+
+.shooting-level-up {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(24px, 7vw, 42px);
+    font-weight: bold;
+    color: #ffd740;
+    text-shadow: 0 0 20px rgba(255, 215, 64, 0.6), 0 0 40px rgba(255, 215, 64, 0.3);
+    z-index: 25;
+    pointer-events: none;
+    animation: levelUpAnim 1.2s ease-out forwards;
+}
+
+@keyframes levelUpAnim {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ========== 开始界面 ========== */
+
+.shooting-start {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    gap: 16px;
+    padding: 20px;
+}
+
+.shooting-start h2 {
+    font-size: clamp(24px, 7vw, 38px);
+    color: #a0cfff;
+    text-shadow: 0 0 16px rgba(100, 180, 255, 0.5);
+    margin-bottom: 4px;
+}
+
+.shooting-start-subtitle {
+    color: #7aa8d4;
+    font-size: clamp(13px, 3vw, 15px);
+    margin-top: -8px;
+}
+
+.shooting-start .mode-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 280px;
+}
+
+.shooting-start .mode-btn {
+    padding: 12px 16px;
+    font-size: clamp(14px, 3.5vw, 17px);
+    border-radius: 10px;
+    border: 2px solid rgba(100, 180, 255, 0.4);
+    background: rgba(20, 40, 100, 0.5);
+    color: #e3f2fd;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    font-weight: bold;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.shooting-start .mode-btn:hover {
+    background: rgba(33, 150, 243, 0.3);
+    border-color: rgba(100, 180, 255, 0.7);
+    box-shadow: 0 0 16px rgba(100, 180, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.shooting-start .mode-btn:active {
+    transform: translateY(0);
+}
+
+.shooting-start .mode-btn-mixed {
+    border-color: rgba(178, 136, 255, 0.5);
+    background: rgba(60, 20, 100, 0.5);
+}
+
+.shooting-start .mode-btn-mixed:hover {
+    background: rgba(156, 39, 176, 0.3);
+    border-color: rgba(178, 136, 255, 0.7);
+    box-shadow: 0 0 16px rgba(178, 136, 255, 0.3);
+}
+
+.shooting-start .mode-btn-back {
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    font-weight: normal;
+    margin-top: 8px;
+}
+
+.shooting-start .mode-btn-back:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ========== 难度选择 ========== */
+
+.difficulty-group {
+    width: 100%;
+    max-width: 280px;
+    text-align: center;
+}
+
+.difficulty-label {
+    color: #7aa8d4;
+    font-size: clamp(12px, 2.8vw, 14px);
+    margin: 0 0 8px 0;
+}
+
+.difficulty-options {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.diff-btn {
+    flex: 1;
+    padding: 8px 4px;
+    font-size: clamp(12px, 2.8vw, 14px);
+    border-radius: 8px;
+    border: 2px solid rgba(100, 180, 255, 0.25);
+    background: rgba(20, 30, 80, 0.5);
+    color: #8ab4d8;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    font-weight: bold;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.diff-btn:hover {
+    background: rgba(33, 150, 243, 0.15);
+    border-color: rgba(100, 180, 255, 0.5);
+}
+
+.diff-btn.active {
+    border-color: rgba(100, 180, 255, 0.7);
+    background: rgba(33, 150, 243, 0.25);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(100, 180, 255, 0.3);
+    text-shadow: 0 0 6px rgba(100, 180, 255, 0.4);
+}
+
+.shooting-start .highscore-display {
+    color: #ffab40;
+    font-size: clamp(12px, 3vw, 15px);
+    margin-top: 8px;
+}
+
+/* ========== 游戏结束叠层 ========== */
+
+.shooting-gameover {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 30, 0.85);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+}
+
+.shooting-gameover-card {
+    background: linear-gradient(145deg, rgba(20, 30, 80, 0.95), rgba(10, 10, 50, 0.98));
+    border: 1px solid rgba(100, 180, 255, 0.3);
+    border-radius: 14px;
+    padding: clamp(20px, 5vw, 32px);
+    text-align: center;
+    max-width: 300px;
+    width: 88%;
+    box-shadow: 0 0 30px rgba(100, 180, 255, 0.2);
+}
+
+.shooting-gameover-card h2 {
+    font-size: clamp(22px, 6vw, 32px);
+    color: #ffd740;
+    margin-bottom: 12px;
+    text-shadow: 0 0 12px rgba(255, 215, 64, 0.4);
+}
+
+.shooting-gameover-card .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: clamp(13px, 3.2vw, 16px);
+    border-bottom: 1px solid rgba(100, 180, 255, 0.1);
+}
+
+.shooting-gameover-card .result-label {
+    color: #7aa8d4;
+}
+
+.shooting-gameover-card .result-value {
+    color: #fff;
+    font-weight: bold;
+}
+
+.shooting-gameover-card .result-value.new-record {
+    color: #ffd740;
+    text-shadow: 0 0 8px rgba(255, 215, 64, 0.5);
+}
+
+.shooting-gameover-card .new-record-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #ffd740, #ffab40);
+    color: #1a1a4e;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-left: 4px;
+    animation: recordPulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes recordPulse {
+    from { transform: scale(1); }
+    to   { transform: scale(1.08); }
+}
+
+.shooting-gameover-card .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.shooting-gameover-card .btn-primary {
+    background: linear-gradient(135deg, #2196f3, #1976d2);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: clamp(14px, 3vw, 16px);
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+    width: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.shooting-gameover-card .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4);
+}
+
+.shooting-gameover-card .btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 9px 20px;
+    border-radius: 10px;
+    color: #a0cfff;
+    font-size: clamp(13px, 3vw, 15px);
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+    width: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.shooting-gameover-card .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* ========== 响应式 ========== */
+
+@media (max-width: 480px) {
+    .shooting-wrapper {
+        max-width: 100%;
+    }
+
+    .shooting-stats {
+        gap: 5px;
+        padding: 4px 6px;
+        font-size: 11px;
+    }
+
+    .shooting-stats .stat-item {
+        gap: 2px;
+    }
+
+    .shooting-targets {
+        padding: 4px 6px;
+        gap: 4px;
+    }
+
+    .shooting-target-item {
+        font-size: 15px;
+        padding: 2px 8px;
+    }
+
+    .shooting-header {
+        padding: 6px 8px;
+    }
+
+    .shooting-header h1 {
+        font-size: 14px;
+    }
+}

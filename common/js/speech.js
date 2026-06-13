@@ -5,7 +5,7 @@ function speakHanzi(hanzi) {
 
     const utterance = new SpeechSynthesisUtterance(hanzi);
     utterance.lang = "zh-CN";
-    utterance.rate = 0.85;
+    utterance.rate = 0.55;
     utterance.pitch = 1;
 
     window.speechSynthesis.speak(utterance);
