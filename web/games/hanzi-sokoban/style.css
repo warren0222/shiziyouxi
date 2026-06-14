@@ -1,0 +1,871 @@
+/* ========== 汉字推箱子 — 8-bit CRT 像素主题 ========== */
+
+.sokoban-wrapper {
+    width: 100%;
+    height: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    background: #050505;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    font-family: "VT323", "Courier New", "Consolas", "Microsoft YaHei", "PingFang SC", monospace;
+    color: #33ff33;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    letter-spacing: 1px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* ========== CRT 边框 + 扫描线 ========== */
+
+.sokoban-crt-frame {
+    flex: 1;
+    margin: 8px;
+    background: #0a0a0a;
+    border: 4px solid #33ff33;
+    border-radius: 6px;
+    box-shadow:
+        inset 0 0 24px rgba(51, 255, 51, 0.18),
+        0 0 0 2px #050505,
+        0 0 24px rgba(51, 255, 51, 0.4);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.sokoban-crt-frame.hurt {
+    animation: sokobanHurtFlash 0.4s ease-out;
+}
+
+@keyframes sokobanHurtFlash {
+    0%, 100% { border-color: #33ff33; box-shadow: inset 0 0 24px rgba(51, 255, 51, 0.18), 0 0 0 2px #050505, 0 0 24px rgba(51, 255, 51, 0.4); }
+    25%, 75% { border-color: #ff3344; box-shadow: inset 0 0 30px rgba(255, 51, 68, 0.55), 0 0 0 2px #050505, 0 0 32px rgba(255, 51, 68, 0.7); transform: translateX(-3px); }
+    50%      { border-color: #ff3344; box-shadow: inset 0 0 30px rgba(255, 51, 68, 0.55), 0 0 0 2px #050505, 0 0 32px rgba(255, 51, 68, 0.7); transform: translateX(3px); }
+}
+
+.sokoban-scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    background: repeating-linear-gradient(
+        180deg,
+        transparent 0,
+        transparent 2px,
+        rgba(0, 0, 0, 0.18) 2px,
+        rgba(0, 0, 0, 0.18) 3px
+    );
+}
+
+/* ========== 顶栏 ========== */
+
+.sokoban-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border-bottom: 2px dashed rgba(51, 255, 51, 0.3);
+    background: rgba(51, 255, 51, 0.03);
+    flex-shrink: 0;
+    z-index: 5;
+}
+
+.sokoban-title {
+    font-size: clamp(14px, 3.4vw, 18px);
+    color: #ffeb3b;
+    letter-spacing: 2px;
+    text-shadow: 0 0 6px rgba(255, 235, 59, 0.6);
+}
+
+/* ========== 目标条（汉字 + 拼音） ========== */
+
+.sokoban-target-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(8px, 2vw, 14px);
+    padding: 6px 10px;
+    background: rgba(255, 235, 59, 0.05);
+    border-bottom: 2px dashed rgba(255, 235, 59, 0.35);
+    flex-shrink: 0;
+    z-index: 5;
+    flex-wrap: wrap;
+}
+
+.sokoban-target-label {
+    font-size: clamp(11px, 2.6vw, 13px);
+    color: rgba(255, 235, 59, 0.75);
+    letter-spacing: 2px;
+}
+
+.sokoban-target-hanzi {
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    font-size: clamp(22px, 5.4vw, 32px);
+    color: #fff;
+    text-shadow:
+        0 0 12px rgba(255, 235, 59, 0.85),
+        2px 2px 0 rgba(255, 51, 68, 0.4);
+    line-height: 1;
+    letter-spacing: 2px;
+    padding: 2px 14px;
+    background: rgba(255, 235, 59, 0.12);
+    border: 2px solid rgba(255, 235, 59, 0.6);
+    border-radius: 0;
+}
+
+.sokoban-target-pinyin {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    font-size: clamp(13px, 3.2vw, 17px);
+    color: #ffd740;
+    letter-spacing: 1px;
+}
+
+/* ========== 像素按钮 ========== */
+
+.sokoban-pixel-btn {
+    font-family: inherit;
+    font-size: clamp(13px, 3vw, 16px);
+    letter-spacing: 1.5px;
+    padding: 8px 14px;
+    background: #0a0a0a;
+    color: #33ff33;
+    border: 2px solid #33ff33;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.12s;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    text-align: center;
+}
+
+.sokoban-pixel-btn:hover {
+    background: #33ff33;
+    color: #0a0a0a;
+    box-shadow: 0 0 12px rgba(51, 255, 51, 0.6);
+}
+
+.sokoban-pixel-btn:active {
+    transform: translate(1px, 1px);
+}
+
+.sokoban-pixel-btn.small {
+    padding: 4px 10px;
+    font-size: clamp(11px, 2.6vw, 13px);
+}
+
+.sokoban-pixel-btn.back {
+    border-color: rgba(51, 255, 51, 0.4);
+    color: rgba(51, 255, 51, 0.7);
+    margin-top: 12px;
+}
+
+.sokoban-pixel-btn.diff {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+    max-width: 220px;
+    padding: 10px 14px;
+}
+
+.sokoban-pixel-btn.diff small {
+    font-size: clamp(9px, 2vw, 11px);
+    color: rgba(51, 255, 51, 0.7);
+    letter-spacing: 1px;
+}
+
+/* ========== 起始页 ========== */
+
+.sokoban-crt-frame.start-frame {
+    /* 起始页让边框变得稍微"屏幕开机"感 */
+}
+
+.sokoban-start {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    gap: 14px;
+    text-align: center;
+}
+
+.sokoban-pixel-title {
+    font-size: clamp(20px, 5.4vw, 32px);
+    color: #ffeb3b;
+    letter-spacing: 4px;
+    text-shadow:
+        0 0 12px rgba(255, 235, 59, 0.7),
+        2px 2px 0 #ff3344;
+    margin: 0;
+    animation: sokobanTitleGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes sokobanTitleGlow {
+    from { text-shadow: 0 0 8px rgba(255, 235, 59, 0.5), 2px 2px 0 #ff3344; }
+    to   { text-shadow: 0 0 18px rgba(255, 235, 59, 0.9), 2px 2px 0 #ff3344; }
+}
+
+.sokoban-pixel-sub {
+    font-size: clamp(11px, 2.6vw, 13px);
+    color: #33ff33;
+    letter-spacing: 3px;
+    margin: 0;
+}
+
+.sokoban-arcade-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.sokoban-arcade-prompt {
+    color: #33ff33;
+    font-size: clamp(12px, 2.8vw, 14px);
+    letter-spacing: 2px;
+    margin-bottom: 2px;
+    animation: sokobanBlink 1s steps(2) infinite;
+}
+
+@keyframes sokobanBlink {
+    50% { opacity: 0.25; }
+}
+
+.sokoban-pixel-hint {
+    color: rgba(51, 255, 51, 0.65);
+    font-size: clamp(10px, 2.4vw, 12px);
+    letter-spacing: 1px;
+    margin: 4px 0 0;
+}
+
+.sokoban-pixel-record {
+    color: #ffd740;
+    font-size: clamp(12px, 2.8vw, 14px);
+    letter-spacing: 1.5px;
+    margin: 2px 0;
+}
+
+.sokoban-press-start {
+    color: #ffeb3b;
+    font-size: clamp(11px, 2.6vw, 13px);
+    letter-spacing: 2px;
+    animation: sokobanBlink 0.9s steps(2) infinite;
+    margin-top: 4px;
+}
+
+/* ========== 游戏正文：左侧栏 + 网格 + 右侧栏 ========== */
+
+.sokoban-body {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    padding: 6px;
+    gap: 6px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.sokoban-side {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 56px;
+    padding: 6px;
+    background: rgba(51, 255, 51, 0.04);
+    border: 2px dashed rgba(51, 255, 51, 0.25);
+}
+
+.sokoban-side-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 2px;
+    background: #050505;
+    border: 1px solid rgba(51, 255, 51, 0.35);
+}
+
+.side-label {
+    color: rgba(51, 255, 51, 0.75);
+    font-size: clamp(9px, 2.2vw, 11px);
+    letter-spacing: 2px;
+}
+
+.side-value {
+    color: #ffeb3b;
+    font-size: clamp(15px, 3.6vw, 20px);
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px rgba(255, 235, 59, 0.5);
+}
+
+.side-value.lv {
+    color: #18ffff;
+    text-shadow: 0 0 6px rgba(24, 255, 255, 0.5);
+}
+
+.side-value.diff {
+    color: #ff3344;
+    text-shadow: 0 0 6px rgba(255, 51, 68, 0.5);
+}
+
+.side-lives {
+    display: flex;
+    flex-direction: row;
+    gap: 2px;
+    justify-content: center;
+}
+
+.side-life {
+    font-size: clamp(14px, 3.6vw, 18px);
+    line-height: 1;
+}
+
+.side-life.full {
+    color: #ff3344;
+    text-shadow: 0 0 6px rgba(255, 51, 68, 0.7);
+}
+
+.side-life.gone {
+    color: rgba(51, 255, 51, 0.25);
+}
+
+/* ========== 主舞台 ========== */
+
+.sokoban-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    min-width: 0;
+    min-height: 0;
+}
+
+.sokoban-grid {
+    --cell: 36px;       /* 由 JS fitGrid() 实时设置 */
+    width: calc(var(--cell) * var(--cols));
+    height: calc(var(--cell) * var(--rows));
+    position: relative;
+    background: #1a1a1a;
+    border: 2px solid #33ff33;
+    box-shadow:
+        inset 0 0 12px rgba(51, 255, 51, 0.2),
+        0 0 12px rgba(51, 255, 51, 0.3);
+    touch-action: none;
+}
+
+/* ========== 单元格（背景层） ========== */
+
+.sokoban-cell {
+    position: absolute;
+    width: var(--cell);
+    height: var(--cell);
+    transform: translate(calc(var(--x) * var(--cell)), calc(var(--y) * var(--cell)));
+    box-sizing: border-box;
+    border: 1px solid rgba(51, 255, 51, 0.06);
+}
+
+.sokoban-cell.wall {
+    background: repeating-linear-gradient(
+        45deg,
+        #4a4a4a 0,
+        #4a4a4a 4px,
+        #2a2a2a 4px,
+        #2a2a2a 8px
+    );
+    border: 1px solid #777;
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.18),
+        inset -1px -1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.sokoban-cell.target {
+    background: rgba(255, 235, 59, 0.08);
+    border: 1px dashed rgba(255, 235, 59, 0.5);
+}
+
+.sokoban-cell.target::after {
+    content: "";
+    position: absolute;
+    left: 35%;
+    top: 35%;
+    width: 30%;
+    height: 30%;
+    background: rgba(255, 235, 59, 0.55);
+    box-shadow: 0 0 6px rgba(255, 235, 59, 0.7);
+    animation: sokobanTargetPulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes sokobanTargetPulse {
+    from { opacity: 0.55; transform: scale(1); }
+    to   { opacity: 1;    transform: scale(1.35); }
+}
+
+/* ========== 演员通用 ========== */
+
+.sokoban-actor {
+    position: absolute;
+    width: var(--cell);
+    height: var(--cell);
+    transform: translate(calc(var(--x) * var(--cell)), calc(var(--y) * var(--cell)));
+    transition: transform 0.13s linear;
+    box-sizing: border-box;
+    pointer-events: none;
+    image-rendering: pixelated;
+}
+
+/* ========== 箱子（缩小版，在格子里留出 6px 边距） ========== */
+
+.sokoban-box {
+    z-index: 6;
+    background:
+        linear-gradient(180deg, #b8862a 0%, #8b6914 50%, #5d4408 100%);
+    border: 2px solid #3a2a05;
+    box-shadow:
+        inset 0 2px 0 rgba(255, 220, 130, 0.5),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+        0 2px 4px rgba(0, 0, 0, 0.4);
+    margin: 4px;                     /* 比格子明显小一圈 */
+    width: calc(var(--cell) - 8px);
+    height: calc(var(--cell) - 8px);
+}
+
+.sokoban-box::before {
+    /* 木箱中央 X 形纹路 */
+    content: "";
+    position: absolute;
+    inset: 18%;
+    background:
+        linear-gradient(45deg, transparent 44%, #3a2a05 44%, #3a2a05 56%, transparent 56%),
+        linear-gradient(-45deg, transparent 44%, #3a2a05 44%, #3a2a05 56%, transparent 56%);
+}
+
+.sokoban-box.on-target {
+    background:
+        linear-gradient(180deg, #fff176 0%, #ffd740 50%, #ff8f00 100%);
+    border-color: #4a2c00;
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.6),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+        0 0 12px rgba(255, 215, 64, 0.85),
+        0 2px 4px rgba(0, 0, 0, 0.4);
+    animation: sokobanBoxLit 0.4s ease-out;
+}
+
+.sokoban-box.on-target::before {
+    background:
+        linear-gradient(45deg, transparent 44%, #4a2c00 44%, #4a2c00 56%, transparent 56%),
+        linear-gradient(-45deg, transparent 44%, #4a2c00 44%, #4a2c00 56%, transparent 56%);
+}
+
+@keyframes sokobanBoxLit {
+    0%   { transform: translate(calc(var(--x) * var(--cell)), calc(var(--y) * var(--cell))) scale(1); filter: brightness(2.5); }
+    60%  { transform: translate(calc(var(--x) * var(--cell)), calc(var(--y) * var(--cell))) scale(1.18); }
+    100% { transform: translate(calc(var(--x) * var(--cell)), calc(var(--y) * var(--cell))) scale(1); filter: none; }
+}
+
+/* ========== 玩家：像素小人 ========== */
+
+.sokoban-player {
+    z-index: 8;
+    width: calc(var(--cell) - 2px);
+    height: calc(var(--cell) - 2px);
+    margin: 1px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+}
+
+.sokoban-player .player-head {
+    position: absolute;
+    top: 12%;
+    left: 30%;
+    width: 40%;
+    height: 30%;
+    background: #ffd180;
+    border: 1px solid #5a3000;
+    box-shadow:
+        inset -1px -1px 0 rgba(0, 0, 0, 0.2),
+        inset 1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.sokoban-player .player-head::before,
+.sokoban-player .player-head::after {
+    /* 双眼 */
+    content: "";
+    position: absolute;
+    top: 38%;
+    width: 16%;
+    height: 26%;
+    background: #1a1a1a;
+}
+
+.sokoban-player .player-head::before { left: 18%; }
+.sokoban-player .player-head::after  { right: 18%; }
+
+.sokoban-player .player-body {
+    position: absolute;
+    top: 42%;
+    left: 22%;
+    width: 56%;
+    height: 44%;
+    background: #33ff33;
+    border: 1px solid #0a0a0a;
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.3),
+        0 0 6px rgba(51, 255, 51, 0.55);
+}
+
+.sokoban-player .player-arrow {
+    /* 朝向小三角 */
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    transition: all 0.1s;
+}
+
+.sokoban-player.face-up .player-arrow {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 4px 6px 4px;
+    border-color: transparent transparent #ffeb3b transparent;
+}
+.sokoban-player.face-down .player-arrow {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px 4px 0 4px;
+    border-color: #ffeb3b transparent transparent transparent;
+}
+.sokoban-player.face-left .player-arrow {
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 4px 6px 4px 0;
+    border-color: transparent #ffeb3b transparent transparent;
+}
+.sokoban-player.face-right .player-arrow {
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 4px 0 4px 6px;
+    border-color: transparent transparent transparent #ffeb3b;
+}
+
+/* ========== 敌人：单格全拼巡逻者 ========== */
+
+.sokoban-enemy {
+    z-index: 7;
+    width: calc(var(--cell) - 4px);
+    height: calc(var(--cell) - 4px);
+    margin: 2px;
+    background: linear-gradient(180deg, #ff5252 0%, #b71c1c 100%);
+    border: 2px solid #4a0000;
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.3),
+        0 0 8px rgba(255, 51, 68, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 2px;
+    overflow: hidden;
+    animation: sokobanEnemyBob 0.6s ease-in-out infinite alternate;
+}
+
+.sokoban-enemy .enemy-pinyin {
+    font-family: "Microsoft YaHei", "PingFang SC", "Courier New", monospace;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0;
+    line-height: 1;
+    text-shadow:
+        0 1px 0 #4a0000,
+        0 0 4px rgba(255, 235, 235, 0.4);
+    /* font-size 由 JS 按拼音字数动态注入 */
+    white-space: nowrap;
+    text-align: center;
+}
+
+@keyframes sokobanEnemyBob {
+    from { filter: brightness(1); }
+    to   { filter: brightness(1.25); }
+}
+
+/* ========== 底部按钮栏 ========== */
+
+.sokoban-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-top: 2px dashed rgba(51, 255, 51, 0.3);
+    background: rgba(51, 255, 51, 0.03);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.sokoban-hint {
+    font-size: clamp(10px, 2.4vw, 12px);
+    color: rgba(51, 255, 51, 0.6);
+    letter-spacing: 1px;
+}
+
+/* ========== 过关浮层 ========== */
+
+.sokoban-win-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 60;
+    animation: sokobanWinFadeIn 0.3s ease-out;
+}
+
+@keyframes sokobanWinFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.sokoban-win-card {
+    text-align: center;
+    color: #ffeb3b;
+    padding: 16px;
+}
+
+.sokoban-win-mask {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    gap: 2px;
+    width: clamp(160px, 42vw, 240px);
+    height: clamp(160px, 42vw, 240px);
+    margin: 0 auto 12px;
+    padding: 6px;
+    background: #050505;
+    border: 2px solid #ffeb3b;
+    box-shadow: 0 0 18px rgba(255, 235, 59, 0.6);
+}
+
+.win-mask-cell {
+    background: rgba(255, 235, 59, 0.06);
+    border: 1px solid rgba(255, 235, 59, 0.15);
+}
+
+.win-mask-cell.lit {
+    background: #ffeb3b;
+    box-shadow: 0 0 8px rgba(255, 235, 59, 0.9);
+    animation: sokobanWinCellLit 0.4s ease-out forwards;
+    opacity: 0;
+}
+
+@keyframes sokobanWinCellLit {
+    from { opacity: 0; transform: scale(0.4); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.sokoban-win-hanzi {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    font-size: clamp(36px, 9vw, 56px);
+    color: #fff;
+    text-shadow: 0 0 14px rgba(255, 235, 59, 0.8);
+    margin-top: 6px;
+    letter-spacing: 2px;
+}
+
+.sokoban-win-pinyin {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    font-size: clamp(14px, 3.4vw, 18px);
+    color: #ffd740;
+    margin: 4px 0 8px;
+}
+
+.sokoban-win-label {
+    color: #33ff33;
+    font-size: clamp(13px, 3vw, 16px);
+    letter-spacing: 3px;
+    animation: sokobanBlink 0.6s steps(2) infinite;
+}
+
+/* ========== GAME OVER 结算 ========== */
+
+.sokoban-gameover {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 70;
+}
+
+.sokoban-gameover-inner {
+    text-align: center;
+    padding: 16px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.sokoban-go-title {
+    font-size: clamp(28px, 7vw, 40px);
+    color: #ff3344;
+    letter-spacing: 6px;
+    text-shadow: 0 0 16px rgba(255, 51, 68, 0.9), 3px 3px 0 #4a0000;
+    margin-bottom: 16px;
+    animation: sokobanGoBlink 0.6s steps(2) infinite;
+}
+
+@keyframes sokobanGoBlink {
+    50% { opacity: 0.35; }
+}
+
+.sokoban-go-stats {
+    color: #33ff33;
+    font-family: inherit;
+    font-size: clamp(13px, 3vw, 16px);
+    text-align: left;
+    margin: 0 auto 18px;
+    background: #050505;
+    border: 1px solid rgba(51, 255, 51, 0.4);
+    padding: 8px 14px;
+    min-height: 110px;
+    line-height: 1.6;
+    letter-spacing: 1px;
+    white-space: pre;
+    box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.18);
+}
+
+.sokoban-go-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.sokoban-go-btns .sokoban-pixel-btn {
+    width: 100%;
+    max-width: 220px;
+}
+
+/* ========== 响应式 ========== */
+
+@media (max-width: 600px) {
+    .sokoban-wrapper {
+        max-width: 100%;
+    }
+
+    .sokoban-crt-frame {
+        margin: 4px;
+        border-width: 3px;
+    }
+
+    .sokoban-topbar {
+        padding: 4px 6px;
+    }
+
+    .sokoban-target-bar {
+        padding: 4px 8px;
+        gap: 8px;
+    }
+
+    .sokoban-body {
+        flex-wrap: wrap;
+        padding: 4px;
+        gap: 4px;
+    }
+
+    /* 侧栏在手机上变成横向条，分别贴上下两边，把绝大多数空间留给网格 */
+    .sokoban-side {
+        flex-direction: row;
+        flex: 0 0 auto;
+        width: 100%;
+        min-width: 0;
+        padding: 3px;
+        gap: 4px;
+        justify-content: space-around;
+        order: 2;
+    }
+
+    .sokoban-side.left {
+        order: 0;          /* 命数 + 关卡 → 网格上方 */
+    }
+
+    .sokoban-side.right {
+        order: 2;          /* 步数 + 点亮 + 难度 → 网格下方 */
+    }
+
+    .sokoban-side-block {
+        flex: 1;
+        flex-direction: row;
+        gap: 4px;
+        padding: 3px 4px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sokoban-stage {
+        flex: 1 1 100%;
+        order: 1;          /* 网格永远在中间 */
+        padding: 2px;
+    }
+
+    .side-label {
+        font-size: 10px;
+    }
+
+    .side-value {
+        font-size: 14px;
+    }
+
+    .side-life {
+        font-size: 14px;
+    }
+
+    .side-lives {
+        flex-direction: row;
+    }
+
+    .sokoban-footer {
+        padding: 4px 6px;
+        gap: 4px;
+    }
+
+    .sokoban-hint {
+        font-size: 10px;
+        flex: 1 1 100%;
+        text-align: center;
+    }
+}
+
+/* 极小屏幕（窄手机竖屏）：再压缩一档 */
+@media (max-width: 380px) {
+    .sokoban-target-hanzi {
+        font-size: 22px;
+        padding: 1px 10px;
+    }
+    .sokoban-target-pinyin {
+        font-size: 12px;
+    }
+}

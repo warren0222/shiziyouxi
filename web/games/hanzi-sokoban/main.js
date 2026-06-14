@@ -1,0 +1,1367 @@
+function createSokobanGame({ root, onBack }) {
+    /* ===== 状态 ===== */
+    let mounted = false;
+    let gameActive = false;
+    let isWinning = false;
+
+    let baseDifficulty = 1;     // 0 EASY / 1 NORMAL / 2 HARD
+    let level = 1;
+    let lives = 3;
+    let moves = 0;
+    let totalMoves = 0;
+    let highest = 0;
+
+    let player = null;          // { y, x, face: 'up'|'down'|'left'|'right' }
+    let playerStart = null;
+    let playerEl = null;
+
+    let boxes = [];             // [{ y, x, el, onTarget }]
+    let enemies = [];           // [{ y, x, el, behavior, dir }]
+
+    let grid = null;            // 2D char array '.' | '#' | 'T'
+    let mask = null;
+    let currentHanzi = "";
+
+    let history = [];           // undo 栈
+    let usedHanzi = new Set();
+
+    let enemyTimerId = null;
+    let lastKeyAt = 0;
+    let swipeStart = null;
+
+    let audioCtx = null;
+
+    /* ===== 常量 ===== */
+    const COLS = 13;
+    const ROWS = 13;
+    const MASK_SIZE = 9;        // 9×9 像素汉字（中文像素字体的可识别下限）
+    const MASK_OFFSET_Y = 2;    // mask 起点行（居中：2..10）
+    const MASK_OFFSET_X = 2;
+    const PLAYER_START_Y = 11;
+    const PLAYER_START_X = 6;
+    const HISTORY_LIMIT = 30;
+    const SWIPE_THRESHOLD = 30;
+    const KEY_MIN_INTERVAL = 80;   // ms
+    const STORAGE_KEY = "sokoban_highest_level";
+
+    const DIFF_NAMES = ["简单", "普通", "困难"];
+
+    // 9×9 像素拼字效果较好的常用字（结构清晰，笔画不会糊成一团）
+    const SOKOBAN_HANZI_POOL = [
+        "一","二","三","十","上","下","土","工","王","干",
+        "口","日","目","田","回","中","山","水","火","川",
+        "人","大","小","木","本","禾","米","天","太","夫",
+        "门","月","用","白","由","甲","申","丁",
+        "心","生","主","半","正","可","古","石","车","女",
+        "子","了","力","刀","几","八",
+    ];
+
+    /* ===== 音效 ===== */
+
+    function getAudioCtx() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        return audioCtx;
+    }
+
+    function playTone(freq, duration, type, volume) {
+        try {
+            const ctx = getAudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type || "sine";
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            gain.gain.setValueAtTime(volume || 0.12, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + duration);
+        } catch (e) { /* ignore */ }
+    }
+
+    function playPushSound()  { playTone(220, 0.05, "square", 0.08); }
+    function playLightSound() {
+        playTone(880, 0.06, "square", 0.1);
+        setTimeout(() => playTone(1320, 0.08, "square", 0.08), 50);
+    }
+    function playWinSound() {
+        playTone(523, 0.1, "square", 0.1);
+        setTimeout(() => playTone(659, 0.1, "square", 0.1), 100);
+        setTimeout(() => playTone(784, 0.15, "square", 0.1), 200);
+        setTimeout(() => playTone(1047, 0.2, "square", 0.1), 350);
+    }
+    function playHurtSound() {
+        playTone(160, 0.18, "sawtooth", 0.12);
+        setTimeout(() => playTone(110, 0.25, "sawtooth", 0.1), 80);
+    }
+    function playGameOverSound() {
+        playTone(440, 0.2, "sawtooth", 0.1);
+        setTimeout(() => playTone(330, 0.2, "sawtooth", 0.1), 150);
+        setTimeout(() => playTone(220, 0.4, "sawtooth", 0.08), 300);
+    }
+    function playBumpSound() { playTone(120, 0.04, "square", 0.06); }
+
+    /* ===== 工具：汉字 → 9×9 像素字骨架掩码 ===== */
+
+    const maskCache = new Map();
+    function hanziToMask(hanzi) {
+        if (maskCache.has(hanzi)) return maskCache.get(hanzi);
+        const SRC = 144;            // 16×9，每格 16×16 采样块
+        const c = document.createElement("canvas");
+        c.width = c.height = SRC;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, SRC, SRC);
+        ctx.fillStyle = "#000";
+        // 字号留约 30% 边距 + 中等字重；字重不必再调薄，靠后面的细化算法把笔画收成 1px
+        ctx.font = "500 100px 'Microsoft YaHei','PingFang SC','Hiragino Sans GB','STHeiti',sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(hanzi, SRC / 2, SRC / 2 + 4);
+        const img = ctx.getImageData(0, 0, SRC, SRC).data;
+
+        // 1. 二值化（阈值 96，去掉 anti-alias 灰边）
+        const bin = new Uint8Array(SRC * SRC);
+        for (let i = 0; i < SRC * SRC; i++) {
+            bin[i] = img[i * 4] < 96 ? 1 : 0;
+        }
+
+        // 2. 把"点"笔画替换成短斜线：
+        //    点在字体里通常是 ~10×10 的小 blob，骨架化后只剩 1 像素 → 1 格亮 → 看起来不像笔画
+        //    在骨架化之前先把它换成一条 1px 对角线，骨架化阶段不会动它
+        replaceDotsWithDiagonals(bin, SRC, SRC);
+
+        // 3. Zhang-Suen 细化：把任意粗细的笔画收缩成 1px 中心线 →
+        //    自动去笔锋、统一线宽，撇捺天然变成直斜线
+        zhangSuenThin(bin, SRC, SRC);
+
+        // 4. 笔段直化：把骨架按"交叉点"切成各笔段，每段用首尾连成纯几何直线 →
+        //    撇捺严格 45°、横竖严格水平/垂直、弯钩拉直；同一字所有笔画规则化
+        idealizeStrokes(bin, SRC, SRC);
+
+        // 5. 下采样到 9×9：每格内有任意骨架像素即点亮
+        const cellPx = SRC / MASK_SIZE;     // 16
+        const m = [];
+        for (let r = 0; r < MASK_SIZE; r++) {
+            const row = [];
+            for (let cc = 0; cc < MASK_SIZE; cc++) {
+                let lit = false;
+                const x0 = Math.floor(cc * cellPx), y0 = Math.floor(r * cellPx);
+                const x1 = Math.floor((cc + 1) * cellPx), y1 = Math.floor((r + 1) * cellPx);
+                for (let y = y0; y < y1 && !lit; y++) {
+                    for (let x = x0; x < x1; x++) {
+                        if (bin[y * SRC + x]) { lit = true; break; }
+                    }
+                }
+                row.push(lit);
+            }
+            m.push(row);
+        }
+        maskCache.set(hanzi, m);
+        return m;
+    }
+
+    // 把字体里的"点"笔画（小 blob，骨架化后只剩 1 像素）替换成 1px 短斜线
+    // 步骤：
+    //   1) 8 邻接 BFS 找所有连通分量
+    //   2) 小且方正的分量判定为"点"：面积小、bbox 最大边短、长宽比 ≤ 2:1
+    //   3) 擦掉 blob，在质心画一条 1px 对角线（左半边字 /，右半边字 \；契合书写惯例）
+    //   4) Zhang-Suen 对纯 1px 对角线不会修改（中段 B=2 A=2，端点 B=1，都不命中删除条件）
+    function replaceDotsWithDiagonals(bin, w, h) {
+        const visited = new Uint8Array(w * h);
+        const components = [];
+
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const idx0 = y * w + x;
+                if (!bin[idx0] || visited[idx0]) continue;
+                visited[idx0] = 1;
+                const cells = [[x, y]];
+                let xmin = x, xmax = x, ymin = y, ymax = y;
+                const queue = [idx0];
+                let head = 0;
+                while (head < queue.length) {
+                    const i = queue[head++];
+                    const cx = i % w, cy = (i - cx) / w;
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (!dx && !dy) continue;
+                            const nx = cx + dx, ny = cy + dy;
+                            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                            const ni = ny * w + nx;
+                            if (bin[ni] && !visited[ni]) {
+                                visited[ni] = 1;
+                                queue.push(ni);
+                                cells.push([nx, ny]);
+                                if (nx < xmin) xmin = nx;
+                                if (nx > xmax) xmax = nx;
+                                if (ny < ymin) ymin = ny;
+                                if (ny > ymax) ymax = ny;
+                            }
+                        }
+                    }
+                }
+                components.push({ cells, xmin, xmax, ymin, ymax });
+            }
+        }
+
+        const cellPx = w / MASK_SIZE;                      // 16
+        const DOT_MIN_AREA = 4;                             // 忽略孤立噪点
+        const DOT_MAX_AREA = Math.floor(cellPx * cellPx * 0.7);  // ~180px²
+        const DOT_MAX_DIM  = Math.floor(cellPx * 1.3);     // ~21px：超过这个就不是点
+        const halfLen      = Math.floor(cellPx * 1.0);     // 替换斜线的半长（约 1 格）
+
+        for (const comp of components) {
+            const ww = comp.xmax - comp.xmin + 1;
+            const hh = comp.ymax - comp.ymin + 1;
+            const area = comp.cells.length;
+            if (area < DOT_MIN_AREA || area > DOT_MAX_AREA) continue;
+            if (Math.max(ww, hh) > DOT_MAX_DIM) continue;
+            if (Math.max(ww, hh) > 2 * Math.min(ww, hh)) continue;     // 排除长条形
+
+            // 擦掉原 blob
+            for (const [x, y] of comp.cells) bin[y * w + x] = 0;
+
+            // 质心处画 1px 对角线（左半字向 /，右半字向 \）
+            const cx = Math.round((comp.xmin + comp.xmax) / 2);
+            const cy = Math.round((comp.ymin + comp.ymax) / 2);
+            const slantDownRight = cx >= w / 2;
+            for (let t = -halfLen; t <= halfLen; t++) {
+                const px = cx + t;
+                const py = slantDownRight ? cy + t : cy - t;
+                if (px >= 0 && px < w && py >= 0 && py < h) {
+                    bin[py * w + px] = 1;
+                }
+            }
+        }
+    }
+
+    // Zhang-Suen 1984：二值图细化算法
+    // 反复迭代两轮（pass1 / pass2），每轮按 8 邻居规则把可移除的「皮」像素剥掉，
+    // 直到不再变化；最终笔画收缩成 1px 中心骨架，保留拓扑连通性。
+    function zhangSuenThin(bin, w, h) {
+        function pass(cond1) {
+            const remove = [];
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    if (!bin[y * w + x]) continue;
+                    const p2 = bin[(y - 1) * w + x];
+                    const p3 = bin[(y - 1) * w + (x + 1)];
+                    const p4 = bin[y * w + (x + 1)];
+                    const p5 = bin[(y + 1) * w + (x + 1)];
+                    const p6 = bin[(y + 1) * w + x];
+                    const p7 = bin[(y + 1) * w + (x - 1)];
+                    const p8 = bin[y * w + (x - 1)];
+                    const p9 = bin[(y - 1) * w + (x - 1)];
+                    const B = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+                    if (B < 2 || B > 6) continue;
+                    // A = 邻居环 P2..P9..P2 中 0→1 跳变次数；恰好为 1 才是「皮」像素
+                    let A = 0;
+                    if (!p2 && p3) A++;
+                    if (!p3 && p4) A++;
+                    if (!p4 && p5) A++;
+                    if (!p5 && p6) A++;
+                    if (!p6 && p7) A++;
+                    if (!p7 && p8) A++;
+                    if (!p8 && p9) A++;
+                    if (!p9 && p2) A++;
+                    if (A !== 1) continue;
+                    if (cond1) {
+                        if (p2 && p4 && p6) continue;
+                        if (p4 && p6 && p8) continue;
+                    } else {
+                        if (p2 && p4 && p8) continue;
+                        if (p2 && p6 && p8) continue;
+                    }
+                    remove.push(y * w + x);
+                }
+            }
+            for (const i of remove) bin[i] = 0;
+            return remove.length > 0;
+        }
+        let changed = true;
+        let safety = 40;        // 上限：避免极端字形导致死循环
+        while (changed && safety-- > 0) {
+            const c1 = pass(true);
+            const c2 = pass(false);
+            changed = c1 || c2;
+        }
+    }
+
+    // 笔段直化：把骨架按"交叉点"切成各 branch，每段替换成首尾的 Bresenham 直线
+    //   1) 交叉点 = 骨架像素的 8 邻骨架像素数 ≥ 3
+    //   2) 临时移除交叉点，骨架被拆成若干 8 连通的 branch
+    //   3) 每个 branch 找最远的两个像素作为"首尾"（覆盖端点和环），用 Bresenham 重画一条直线
+    //   4) 再把交叉点加回来
+    // 效果：撇捺被强制成 45°、横竖严格水平/竖直、弯曲笔画被拉直
+    function idealizeStrokes(bin, w, h) {
+        // 1. 标记交叉点
+        const isJunction = new Uint8Array(w * h);
+        for (let y = 1; y < h - 1; y++) {
+            for (let x = 1; x < w - 1; x++) {
+                if (!bin[y * w + x]) continue;
+                let n = 0;
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (!dx && !dy) continue;
+                        if (bin[(y + dy) * w + (x + dx)]) n++;
+                    }
+                }
+                if (n >= 3) isJunction[y * w + x] = 1;
+            }
+        }
+
+        // 2. 拷贝骨架并扣掉交叉点 → branch 视图
+        const skel = new Uint8Array(w * h);
+        for (let i = 0; i < w * h; i++) {
+            skel[i] = (bin[i] && !isJunction[i]) ? 1 : 0;
+        }
+
+        // 3. 8 连通 BFS 找所有 branch
+        const visited = new Uint8Array(w * h);
+        const branches = [];
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const idx0 = y * w + x;
+                if (!skel[idx0] || visited[idx0]) continue;
+                visited[idx0] = 1;
+                const cells = [[x, y]];
+                const queue = [idx0];
+                let head = 0;
+                while (head < queue.length) {
+                    const i = queue[head++];
+                    const cx = i % w, cy = (i - cx) / w;
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (!dx && !dy) continue;
+                            const nx = cx + dx, ny = cy + dy;
+                            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                            const ni = ny * w + nx;
+                            if (skel[ni] && !visited[ni]) {
+                                visited[ni] = 1;
+                                queue.push(ni);
+                                cells.push([nx, ny]);
+                            }
+                        }
+                    }
+                }
+                branches.push(cells);
+            }
+        }
+
+        // 4. 重绘：先放交叉点，再为每个 branch 画一条「最远两端 Bresenham 直线」
+        const result = new Uint8Array(w * h);
+        for (let i = 0; i < w * h; i++) {
+            if (isJunction[i]) result[i] = 1;
+        }
+        for (const branch of branches) {
+            if (branch.length === 1) {
+                const [x, y] = branch[0];
+                result[y * w + x] = 1;
+                continue;
+            }
+            // 最远像素对（O(n²)，branch 通常 < 20 像素，开销可忽略）
+            let p1 = branch[0], p2 = branch[0], maxD = 0;
+            for (let i = 0; i < branch.length; i++) {
+                for (let j = i + 1; j < branch.length; j++) {
+                    const dx = branch[i][0] - branch[j][0];
+                    const dy = branch[i][1] - branch[j][1];
+                    const d = dx * dx + dy * dy;
+                    if (d > maxD) {
+                        maxD = d;
+                        p1 = branch[i];
+                        p2 = branch[j];
+                    }
+                }
+            }
+            drawBresenham(result, p1[0], p1[1], p2[0], p2[1], w, h);
+        }
+
+        // 5. 写回 bin
+        for (let i = 0; i < w * h; i++) bin[i] = result[i];
+    }
+
+    function drawBresenham(bin, x0, y0, x1, y1, w, h) {
+        const dx = Math.abs(x1 - x0);
+        const dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1;
+        const sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+        let x = x0, y = y0;
+        // safety 上限：尺寸 + 一点冗余，避免任何意外死循环
+        let safety = (dx + dy) + 4;
+        while (safety-- > 0) {
+            if (x >= 0 && x < w && y >= 0 && y < h) bin[y * w + x] = 1;
+            if (x === x1 && y === y1) break;
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x += sx; }
+            if (e2 < dx) { err += dx; y += sy; }
+        }
+    }
+
+    function maskOccupiedCount(m) {
+        let n = 0;
+        for (const row of m) for (const v of row) if (v) n++;
+        return n;
+    }
+
+    /* ===== 选字 ===== */
+
+    function pickNextHanzi() {
+        // 9×9 骨架掩码：细化后笔画只有 1px，点亮格数显著少于"涂面式"
+        // 5(一) ～ 24(田/目) 比较常见；超出此范围说明字体异常或字形太复杂
+        let pool = SOKOBAN_HANZI_POOL.filter(h => {
+            const m = hanziToMask(h);
+            const n = maskOccupiedCount(m);
+            return n >= 5 && n <= 24;
+        });
+        // 兜底：极端字体下范围可能不够，先放宽到 [3, 36]，仍不行就用全部
+        if (pool.length === 0) {
+            pool = SOKOBAN_HANZI_POOL.filter(h => {
+                const n = maskOccupiedCount(hanziToMask(h));
+                return n >= 3 && n <= 36;
+            });
+        }
+        if (pool.length === 0) pool = SOKOBAN_HANZI_POOL.slice();
+
+        // 去重（避免重复出现）
+        const fresh = pool.filter(h => !usedHanzi.has(h));
+        const candidates = fresh.length > 0 ? fresh : (usedHanzi.clear(), pool);
+        const hanzi = candidates[Math.floor(Math.random() * candidates.length)];
+        usedHanzi.add(hanzi);
+        return hanzi;
+    }
+
+    /* ===== 关卡生成 ===== */
+
+    function inBounds(y, x) { return y >= 0 && y < ROWS && x >= 0 && x < COLS; }
+
+    function createEmptyGrid() {
+        const g = [];
+        for (let r = 0; r < ROWS; r++) {
+            const row = [];
+            for (let c = 0; c < COLS; c++) row.push(".");
+            g.push(row);
+        }
+        return g;
+    }
+
+    function addBorderWalls(g) {
+        for (let c = 0; c < COLS; c++) {
+            g[0][c] = "#";
+            g[ROWS - 1][c] = "#";
+        }
+        for (let r = 0; r < ROWS; r++) {
+            g[r][0] = "#";
+            g[r][COLS - 1] = "#";
+        }
+    }
+
+    function placeMaskAsTargets(g, m) {
+        const targets = [];
+        for (let r = 0; r < MASK_SIZE; r++) {
+            for (let c = 0; c < MASK_SIZE; c++) {
+                if (m[r][c]) {
+                    const yy = MASK_OFFSET_Y + r;
+                    const xx = MASK_OFFSET_X + c;
+                    g[yy][xx] = "T";
+                    targets.push({ y: yy, x: xx });
+                }
+            }
+        }
+        return targets;
+    }
+
+    function isTargetCell(y, x) {
+        return inBounds(y, x) && grid[y][x] === "T";
+    }
+
+    function isWallCell(y, x) {
+        return inBounds(y, x) && grid[y][x] === "#";
+    }
+
+    function boxAt(y, x) {
+        return boxes.find(b => b.y === y && b.x === x);
+    }
+
+    function enemyAt(y, x) {
+        return enemies.find(e => e.y === y && e.x === x);
+    }
+
+    function placeBoxes(g, count, playerStart, targets) {
+        const placed = [];
+        const banned = new Set();
+        // 不能把箱子放在目标格上（关卡看起来是"已完成"），不能放在玩家起点
+        targets.forEach(t => banned.add(t.y + "," + t.x));
+        banned.add(playerStart.y + "," + playerStart.x);
+
+        // 收集候选：正交 4 邻居全部是非墙、非边界（即贴边和贴墙的位置都被排除）
+        // 这样玩家从任意方向都能进入箱子的对面，不会出现"贴边推不动"的卡死局面
+        const candidates = [];
+        for (let r = 2; r < ROWS - 2; r++) {
+            for (let c = 2; c < COLS - 2; c++) {
+                if (g[r][c] !== "." && g[r][c] !== "T") continue;
+                if (g[r][c] === "T") continue;
+                if (banned.has(r + "," + c)) continue;
+                // 四个正交邻居必须都不是墙
+                const allSidesOpen = [[-1,0],[1,0],[0,-1],[0,1]].every(([dy, dx]) => {
+                    const ny = r + dy, nx = c + dx;
+                    return inBounds(ny, nx) && g[ny][nx] !== "#";
+                });
+                if (!allSidesOpen) continue;
+                candidates.push({ y: r, x: c });
+            }
+        }
+
+        // 偏好：靠近边角、远离目标；用 shuffle 取前 count 个
+        shuffle(candidates);
+        for (let i = 0; i < count && i < candidates.length; i++) {
+            const pos = candidates[i];
+            placed.push({ y: pos.y, x: pos.x, onTarget: false });
+            banned.add(pos.y + "," + pos.x);
+        }
+        return placed;
+    }
+
+    function addInteriorWalls(g, count, targets, playerStart, boxes) {
+        // 候选：非边、非目标、非箱子、非玩家、与目标至少留一条进入方向
+        const banned = new Set();
+        targets.forEach(t => banned.add(t.y + "," + t.x));
+        boxes.forEach(b => banned.add(b.y + "," + b.x));
+        // 关键：箱子四个正交邻居也禁止放墙（避免推不动）
+        boxes.forEach(b => {
+            [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dy, dx]) => {
+                banned.add((b.y + dy) + "," + (b.x + dx));
+            });
+        });
+        banned.add(playerStart.y + "," + playerStart.x);
+        // 玩家起点周围 4 邻也保留为空，避免被墙堵死
+        [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dy, dx]) => {
+            banned.add((playerStart.y + dy) + "," + (playerStart.x + dx));
+        });
+
+        const candidates = [];
+        for (let r = 1; r < ROWS - 1; r++) {
+            for (let c = 1; c < COLS - 1; c++) {
+                if (g[r][c] !== ".") continue;
+                if (banned.has(r + "," + c)) continue;
+                candidates.push({ y: r, x: c });
+            }
+        }
+        shuffle(candidates);
+
+        let placed = 0;
+        for (const pos of candidates) {
+            if (placed >= count) break;
+            // 模拟放墙：检查每个目标周围是否仍至少有一个非墙邻居（粗略保证可达）
+            g[pos.y][pos.x] = "#";
+            const ok = targets.every(t => {
+                return [[-1,0],[1,0],[0,-1],[0,1]].some(([dy, dx]) => {
+                    const ny = t.y + dy, nx = t.x + dx;
+                    return inBounds(ny, nx) && g[ny][nx] !== "#";
+                });
+            });
+            if (!ok) {
+                g[pos.y][pos.x] = ".";
+                continue;
+            }
+            placed++;
+        }
+    }
+
+    function spawnEnemies(g, count, speed, behaviors, playerStart, boxes) {
+        const banned = new Set();
+        boxes.forEach(b => banned.add(b.y + "," + b.x));
+        // 不在玩家起点的 3×3 范围内出生
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            banned.add((playerStart.y + dy) + "," + (playerStart.x + dx));
+        }
+        // 不在目标格上出生
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+            if (g[r][c] === "T" || g[r][c] === "#") banned.add(r + "," + c);
+        }
+
+        const candidates = [];
+        for (let r = 1; r < ROWS - 1; r++) {
+            for (let c = 1; c < COLS - 1; c++) {
+                if (g[r][c] !== ".") continue;
+                if (banned.has(r + "," + c)) continue;
+                candidates.push({ y: r, x: c });
+            }
+        }
+        shuffle(candidates);
+
+        const result = [];
+        const DIRS_4 = [
+            { dy: -1, dx: 0 }, { dy: 1, dx: 0 },
+            { dy: 0, dx: -1 }, { dy: 0, dx: 1 },
+        ];
+        for (let i = 0; i < count && i < candidates.length; i++) {
+            const pos = candidates[i];
+            // 「单格全拼巡逻」：所有敌人都是 patrol，4 方向随机起步
+            const dir = DIRS_4[Math.floor(Math.random() * 4)];
+            result.push({ y: pos.y, x: pos.x, behavior: "patrol", dir });
+        }
+        return result;
+    }
+
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    /* ===== 难度档 ===== */
+
+    function computeTier(level, baseDiff) {
+        const tier = Math.min(5, baseDiff + Math.floor((level - 1) / 5));
+        // 简单档永久 0 敌
+        if (baseDiff === 0) {
+            return { walls: 0, enemies: 0, enemySpeed: 0, behaviors: [] };
+        }
+        // 普通档永久 0 敌
+        if (baseDiff === 1) {
+            const walls = 2 + Math.floor((level - 1) / 5) * 2; // 2,4,6,8...
+            return { walls, enemies: 0, enemySpeed: 0, behaviors: [] };
+        }
+        // 困难档：所有敌人统一为「单格全拼巡逻」（patrol），随等级提升数量与速度
+        if (tier === 2) return { walls: 4, enemies: 1, enemySpeed: 700, behaviors: ["patrol"] };
+        if (tier === 3) return { walls: 6, enemies: 1, enemySpeed: 600, behaviors: ["patrol"] };
+        if (tier === 4) return { walls: 8, enemies: 2, enemySpeed: 600, behaviors: ["patrol", "patrol"] };
+        return { walls: 10, enemies: 2, enemySpeed: 500, behaviors: ["patrol", "patrol"] };
+    }
+
+    /* ===== 关卡构建（数据 → DOM） ===== */
+
+    function buildLevel() {
+        currentHanzi = pickNextHanzi();
+        mask = hanziToMask(currentHanzi);
+        grid = createEmptyGrid();
+        addBorderWalls(grid);
+        const targets = placeMaskAsTargets(grid, mask);
+
+        playerStart = { y: PLAYER_START_Y, x: PLAYER_START_X, face: "up" };
+        // 如果起点恰好是墙（不应该，但保险），找替代
+        if (grid[playerStart.y][playerStart.x] !== ".") {
+            playerStart = findFirstEmpty(grid);
+        }
+        player = { y: playerStart.y, x: playerStart.x, face: "up" };
+
+        const tier = computeTier(level, baseDifficulty);
+        boxes = placeBoxes(grid, targets.length, playerStart, targets);
+        addInteriorWalls(grid, tier.walls, targets, playerStart, boxes);
+        enemies = spawnEnemies(grid, tier.enemies, tier.enemySpeed, tier.behaviors, playerStart, boxes);
+
+        moves = 0;
+        history = [];
+        isWinning = false;
+
+        renderGrid();
+        renderActors();
+        renderHUD();
+        renderTargetBar();
+        fitGrid();
+
+        // 检查初始已上目标的箱子（理论不应该发生，但放心起见）
+        boxes.forEach(b => {
+            b.onTarget = isTargetCell(b.y, b.x);
+            if (b.onTarget) b.el.classList.add("on-target");
+        });
+
+        startEnemyLoop(tier.enemySpeed);
+    }
+
+    function findFirstEmpty(g) {
+        for (let r = ROWS - 2; r >= 1; r--) {
+            for (let c = 1; c < COLS - 1; c++) {
+                if (g[r][c] === ".") return { y: r, x: c, face: "up" };
+            }
+        }
+        return { y: 1, x: 1, face: "up" };
+    }
+
+    /* ===== 渲染：起始页 / 游戏页 / 结算页 ===== */
+
+    function renderStartScreen() {
+        highest = loadHighest();
+
+        root.innerHTML = `
+            <div class="sokoban-wrapper">
+                <div class="sokoban-crt-frame start-frame">
+                    <div class="sokoban-scanlines"></div>
+
+                    <div class="sokoban-start">
+                        <h2 class="sokoban-pixel-title">📦 汉字推箱子</h2>
+                        <p class="sokoban-pixel-sub">推箱子点亮汉字笔画</p>
+
+                        <div class="sokoban-arcade-menu">
+                            <div class="sokoban-arcade-prompt">▶ 选择难度</div>
+                            <button class="sokoban-pixel-btn diff" data-diff="0">[ 简单 ]<small>无墙 · 无敌人</small></button>
+                            <button class="sokoban-pixel-btn diff" data-diff="1">[ 普通 ]<small>有墙 · 无敌人</small></button>
+                            <button class="sokoban-pixel-btn diff" data-diff="2">[ 困难 ]<small>有墙 + 拼音巡逻敌</small></button>
+                        </div>
+
+                        <p class="sokoban-pixel-hint">每过 5 关难度自动递增</p>
+                        ${highest > 0 ? `<div class="sokoban-pixel-record">🏆 最高关卡：${String(highest).padStart(2, "0")}</div>` : ""}
+
+                        <div class="sokoban-press-start">▶ 准备出发 ◀</div>
+
+                        <button class="sokoban-pixel-btn back" id="sokobanStartBack">[ ← 返回主界面 ]</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        root.querySelectorAll(".sokoban-pixel-btn.diff").forEach(btn => {
+            btn.addEventListener("click", () => {
+                baseDifficulty = parseInt(btn.dataset.diff);
+                startGame();
+            });
+        });
+        root.querySelector("#sokobanStartBack").addEventListener("click", onBack);
+    }
+
+    function renderGameScreen() {
+        const wrapper = root.querySelector(".sokoban-wrapper");
+        wrapper.innerHTML = `
+            <div class="sokoban-crt-frame">
+                <div class="sokoban-scanlines"></div>
+
+                <header class="sokoban-topbar">
+                    <button class="sokoban-pixel-btn small" id="sokobanBack">[ ← 返回 ]</button>
+                    <div class="sokoban-title">📦 汉字推箱子</div>
+                </header>
+
+                <div class="sokoban-target-bar" id="sokobanTargetBar">
+                    <span class="sokoban-target-label">目标</span>
+                    <span class="sokoban-target-hanzi" id="sokobanTargetHanzi">—</span>
+                    <span class="sokoban-target-pinyin" id="sokobanTargetPinyin"></span>
+                </div>
+
+                <div class="sokoban-body">
+                    <aside class="sokoban-side left">
+                        <div class="sokoban-side-block">
+                            <div class="side-label">命数</div>
+                            <div class="side-lives" id="sokobanLives"></div>
+                        </div>
+                        <div class="sokoban-side-block">
+                            <div class="side-label">关卡</div>
+                            <div class="side-value lv" id="sokobanLevel">01</div>
+                        </div>
+                    </aside>
+
+                    <main class="sokoban-stage" id="sokobanStage">
+                        <div class="sokoban-grid" id="sokobanGrid" style="--cols:${COLS}; --rows:${ROWS}"></div>
+                    </main>
+
+                    <aside class="sokoban-side right">
+                        <div class="sokoban-side-block">
+                            <div class="side-label">步数</div>
+                            <div class="side-value" id="sokobanMoves">000</div>
+                        </div>
+                        <div class="sokoban-side-block">
+                            <div class="side-label">点亮</div>
+                            <div class="side-value" id="sokobanLit">0/0</div>
+                        </div>
+                        <div class="sokoban-side-block">
+                            <div class="side-label">难度</div>
+                            <div class="side-value diff" id="sokobanDiff">${DIFF_NAMES[baseDifficulty]}</div>
+                        </div>
+                    </aside>
+                </div>
+
+                <footer class="sokoban-footer">
+                    <button class="sokoban-pixel-btn small" id="sokobanUndo">[ 撤销 ]</button>
+                    <button class="sokoban-pixel-btn small" id="sokobanReset">[ 重置 ]</button>
+                    <span class="sokoban-hint">键盘 ↑↓←→ / 屏幕滑动</span>
+                </footer>
+            </div>
+        `;
+
+        root.querySelector("#sokobanBack").addEventListener("click", () => {
+            stopEnemyLoop();
+            renderStartScreen();
+        });
+        root.querySelector("#sokobanUndo").addEventListener("click", () => undo());
+        root.querySelector("#sokobanReset").addEventListener("click", () => resetCurrentLevel());
+
+        bindGridInputs();
+        bindResize();
+    }
+
+    /* ===== 网格 / 演员渲染 ===== */
+
+    function renderGrid() {
+        const gridEl = root.querySelector("#sokobanGrid");
+        if (!gridEl) return;
+        gridEl.innerHTML = "";
+
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const cell = document.createElement("div");
+                cell.className = "sokoban-cell";
+                cell.style.setProperty("--x", c);
+                cell.style.setProperty("--y", r);
+                if (grid[r][c] === "#") cell.classList.add("wall");
+                else if (grid[r][c] === "T") cell.classList.add("target");
+                gridEl.appendChild(cell);
+            }
+        }
+    }
+
+    function renderActors() {
+        const gridEl = root.querySelector("#sokobanGrid");
+        if (!gridEl) return;
+
+        // boxes
+        boxes.forEach(b => {
+            const el = document.createElement("div");
+            el.className = "sokoban-actor sokoban-box";
+            if (b.onTarget) el.classList.add("on-target");
+            el.style.setProperty("--x", b.x);
+            el.style.setProperty("--y", b.y);
+            gridEl.appendChild(el);
+            b.el = el;
+        });
+
+        // enemies：单格 tile，整格内显示当前汉字的「全拼」（含声调）
+        const enemyPinyin =
+            (window.PINYIN_MAP && window.PINYIN_MAP[currentHanzi]) || currentHanzi || "?";
+        enemies.forEach(e => {
+            const el = document.createElement("div");
+            el.className = "sokoban-actor sokoban-enemy";
+            el.style.setProperty("--x", e.x);
+            el.style.setProperty("--y", e.y);
+            const label = document.createElement("span");
+            label.className = "enemy-pinyin";
+            label.textContent = enemyPinyin;
+            // 字数越多字号越小，保证单格内塞得下
+            const len = enemyPinyin.length;
+            const sizeFactor =
+                len <= 2 ? 0.42 :
+                len <= 3 ? 0.32 :
+                len <= 4 ? 0.26 :
+                len <= 5 ? 0.22 : 0.18;
+            label.style.fontSize = `calc(var(--cell) * ${sizeFactor})`;
+            el.appendChild(label);
+            gridEl.appendChild(el);
+            e.el = el;
+        });
+
+        // player
+        const pEl = document.createElement("div");
+        pEl.className = "sokoban-actor sokoban-player face-" + player.face;
+        pEl.style.setProperty("--x", player.x);
+        pEl.style.setProperty("--y", player.y);
+        const head = document.createElement("span");
+        head.className = "player-head";
+        const body = document.createElement("span");
+        body.className = "player-body";
+        const arrow = document.createElement("span");
+        arrow.className = "player-arrow";
+        pEl.appendChild(head);
+        pEl.appendChild(body);
+        pEl.appendChild(arrow);
+        gridEl.appendChild(pEl);
+        playerEl = pEl;
+    }
+
+    function applyBoxTransform(b) {
+        if (!b.el) return;
+        b.el.style.setProperty("--x", b.x);
+        b.el.style.setProperty("--y", b.y);
+        b.el.classList.toggle("on-target", !!b.onTarget);
+    }
+
+    function applyPlayerTransform() {
+        if (!playerEl) return;
+        playerEl.style.setProperty("--x", player.x);
+        playerEl.style.setProperty("--y", player.y);
+        playerEl.classList.remove("face-up", "face-down", "face-left", "face-right");
+        playerEl.classList.add("face-" + player.face);
+    }
+
+    function applyEnemyTransform(e) {
+        if (!e.el) return;
+        e.el.style.setProperty("--x", e.x);
+        e.el.style.setProperty("--y", e.y);
+    }
+
+    /* ===== HUD ===== */
+
+    function renderTargetBar() {
+        const hzEl = root.querySelector("#sokobanTargetHanzi");
+        const pyEl = root.querySelector("#sokobanTargetPinyin");
+        if (hzEl) hzEl.textContent = currentHanzi || "—";
+        if (pyEl) pyEl.textContent = (window.PINYIN_MAP && window.PINYIN_MAP[currentHanzi]) || "";
+    }
+
+    /* ===== 自适应：计算格子尺寸塞满可用空间 ===== */
+
+    function fitGrid() {
+        const stage = root.querySelector("#sokobanStage");
+        const gridEl = root.querySelector("#sokobanGrid");
+        if (!stage || !gridEl) return;
+        // 取 stage 容器的真实可用尺寸
+        const rect = stage.getBoundingClientRect();
+        const availW = rect.width - 8;
+        const availH = rect.height - 8;
+        if (availW <= 0 || availH <= 0) return;
+        const cellByW = Math.floor(availW / COLS);
+        const cellByH = Math.floor(availH / ROWS);
+        // 范围 22–56px，避免过小或撑爆
+        const cell = Math.max(22, Math.min(56, Math.min(cellByW, cellByH)));
+        gridEl.style.setProperty("--cell", cell + "px");
+    }
+
+    let resizeObserver = null;
+    function bindResize() {
+        unbindResize();
+        if (typeof ResizeObserver !== "undefined") {
+            const stage = root.querySelector("#sokobanStage");
+            if (stage) {
+                resizeObserver = new ResizeObserver(() => fitGrid());
+                resizeObserver.observe(stage);
+            }
+        }
+        window.addEventListener("resize", fitGrid);
+        window.addEventListener("orientationchange", fitGrid);
+    }
+    function unbindResize() {
+        if (resizeObserver) {
+            try { resizeObserver.disconnect(); } catch (_) {}
+            resizeObserver = null;
+        }
+        window.removeEventListener("resize", fitGrid);
+        window.removeEventListener("orientationchange", fitGrid);
+    }
+
+    function renderHUD() {
+        const lvEl = root.querySelector("#sokobanLevel");
+        const mvEl = root.querySelector("#sokobanMoves");
+        const litEl = root.querySelector("#sokobanLit");
+        const liveEl = root.querySelector("#sokobanLives");
+        const diffEl = root.querySelector("#sokobanDiff");
+        const totalTargets = boxes.length;
+        const lit = boxes.filter(b => b.onTarget).length;
+
+        if (lvEl) lvEl.textContent = String(level).padStart(2, "0");
+        if (mvEl) mvEl.textContent = String(moves).padStart(3, "0");
+        if (litEl) litEl.textContent = `${lit}/${totalTargets}`;
+        if (diffEl) diffEl.textContent = DIFF_NAMES[baseDifficulty];
+
+        if (liveEl) {
+            liveEl.innerHTML = "";
+            for (let i = 0; i < 3; i++) {
+                const h = document.createElement("span");
+                h.className = "side-life" + (i < lives ? " full" : " gone");
+                h.textContent = i < lives ? "♥" : "·";
+                liveEl.appendChild(h);
+            }
+        }
+    }
+
+    /* ===== 游戏开始 / 重置 ===== */
+
+    function startGame() {
+        level = 1;
+        lives = 3;
+        totalMoves = 0;
+        usedHanzi = new Set();
+        gameActive = true;
+        isWinning = false;
+
+        renderGameScreen();
+        buildLevel();
+
+        bindKeyboard();
+    }
+
+    function resetCurrentLevel() {
+        if (!gameActive) return;
+        stopEnemyLoop();
+        // 同关，但重新生成（保证一定能解开新布局）
+        buildLevel();
+    }
+
+    /* ===== 移动 / 推箱子 ===== */
+
+    function tryMove(dy, dx) {
+        if (!gameActive || isWinning) return;
+
+        // 朝向更新（即使无法移动也要面向那个方向）
+        const newFace = directionFromDelta(dy, dx);
+        if (newFace) {
+            player.face = newFace;
+            applyPlayerTransform();
+        }
+
+        const ny = player.y + dy, nx = player.x + dx;
+        if (!inBounds(ny, nx) || isWallCell(ny, nx)) {
+            playBumpSound();
+            return;
+        }
+
+        const box = boxAt(ny, nx);
+        if (box) {
+            const by = ny + dy, bx = nx + dx;
+            if (!inBounds(by, bx) || isWallCell(by, bx) || boxAt(by, bx)) {
+                playBumpSound();
+                return;
+            }
+            pushHistory();
+            box.y = by; box.x = bx;
+            const wasOnTarget = box.onTarget;
+            box.onTarget = isTargetCell(by, bx);
+            applyBoxTransform(box);
+            playPushSound();
+            if (box.onTarget && !wasOnTarget) playLightSound();
+        } else {
+            pushHistory();
+        }
+
+        player.y = ny; player.x = nx;
+        applyPlayerTransform();
+        moves++; totalMoves++;
+        renderHUD();
+
+        checkEnemyCollision();
+        if (allTargetsLit() && !isWinning) onLevelComplete();
+    }
+
+    function directionFromDelta(dy, dx) {
+        if (dy === -1) return "up";
+        if (dy === 1) return "down";
+        if (dx === -1) return "left";
+        if (dx === 1) return "right";
+        return null;
+    }
+
+    function allTargetsLit() {
+        return boxes.length > 0 && boxes.every(b => b.onTarget);
+    }
+
+    /* ===== 撤销栈 ===== */
+
+    function pushHistory() {
+        const snap = {
+            player: { y: player.y, x: player.x, face: player.face },
+            boxes: boxes.map(b => ({ y: b.y, x: b.x, onTarget: b.onTarget })),
+            moves,
+        };
+        history.push(snap);
+        if (history.length > HISTORY_LIMIT) history.shift();
+    }
+
+    function undo() {
+        if (!gameActive || isWinning) return;
+        const snap = history.pop();
+        if (!snap) return;
+        player.y = snap.player.y;
+        player.x = snap.player.x;
+        player.face = snap.player.face;
+        applyPlayerTransform();
+        snap.boxes.forEach((s, i) => {
+            const b = boxes[i];
+            b.y = s.y; b.x = s.x; b.onTarget = s.onTarget;
+            applyBoxTransform(b);
+        });
+        moves = snap.moves;
+        renderHUD();
+    }
+
+    /* ===== 敌人循环 ===== */
+
+    function startEnemyLoop(speed) {
+        stopEnemyLoop();
+        if (enemies.length === 0 || speed <= 0) return;
+        enemyTimerId = setInterval(() => {
+            if (!gameActive || isWinning) return;
+            enemies.forEach(stepEnemy);
+            checkEnemyCollision();
+        }, speed);
+    }
+
+    function stopEnemyLoop() {
+        if (enemyTimerId) {
+            clearInterval(enemyTimerId);
+            enemyTimerId = null;
+        }
+    }
+
+    function canEnemyStep(y, x) {
+        if (!inBounds(y, x)) return false;
+        if (isWallCell(y, x)) return false;
+        if (boxAt(y, x)) return false;
+        // 敌人之间不重叠
+        if (enemies.some(e => e.y === y && e.x === x)) return false;
+        return true;
+    }
+
+    function stepEnemy(e) {
+        // 「全屏巡逻」= 偏向当前方向的随机游走：
+        //   - 若当前方向可走：70% 继续直行，30% 主动转向（让它会拐弯）
+        //   - 若当前方向被堵：在剩余可走方向里挑（优先非 180° 调头），实在没得选才掉头
+        const ALL_DIRS = [
+            { dy: -1, dx: 0 }, { dy: 1, dx: 0 },
+            { dy: 0, dx: -1 }, { dy: 0, dx: 1 },
+        ];
+        const valid = ALL_DIRS.filter(d => canEnemyStep(e.y + d.dy, e.x + d.dx));
+        if (valid.length === 0) return;
+
+        const sameDir = valid.find(d => d.dy === e.dir.dy && d.dx === e.dir.dx);
+        const reverse = { dy: -e.dir.dy, dx: -e.dir.dx };
+        const turns = valid.filter(d =>
+            !(d.dy === e.dir.dy && d.dx === e.dir.dx) &&
+            !(d.dy === reverse.dy && d.dx === reverse.dx)
+        );
+
+        let pick;
+        if (sameDir && Math.random() < 0.7) {
+            pick = sameDir;                                 // 大概率沿原方向继续
+        } else if (turns.length > 0) {
+            pick = turns[Math.floor(Math.random() * turns.length)]; // 主动转弯（左/右拐）
+        } else if (sameDir) {
+            pick = sameDir;                                 // 没法转弯就继续直行
+        } else {
+            pick = valid[Math.floor(Math.random() * valid.length)]; // 实在被堵才走 180°
+        }
+
+        e.dir = { dy: pick.dy, dx: pick.dx };
+        e.y += pick.dy; e.x += pick.dx;
+        applyEnemyTransform(e);
+    }
+
+    function checkEnemyCollision() {
+        const hit = enemies.some(e => e.y === player.y && e.x === player.x);
+        if (!hit) return;
+        lives--;
+        playHurtSound();
+        flashScreen();
+        renderHUD();
+        if (lives <= 0) {
+            endGame();
+            return;
+        }
+        // 玩家回起点；箱子保留
+        player.y = playerStart.y;
+        player.x = playerStart.x;
+        player.face = "up";
+        applyPlayerTransform();
+    }
+
+    function flashScreen() {
+        const frame = root.querySelector(".sokoban-crt-frame");
+        if (!frame) return;
+        frame.classList.remove("hurt");
+        // eslint-disable-next-line no-unused-expressions
+        void frame.offsetWidth;
+        frame.classList.add("hurt");
+        setTimeout(() => frame && frame.classList.remove("hurt"), 400);
+    }
+
+    /* ===== 过关 ===== */
+
+    function onLevelComplete() {
+        isWinning = true;
+        stopEnemyLoop();
+        playWinSound();
+
+        if (window.speakHanzi) {
+            try { window.speakHanzi(currentHanzi); } catch (_) {}
+        }
+
+        showLevelCompleteOverlay(() => {
+            level++;
+            const newHighest = Math.max(highest, level - 1);
+            if (newHighest > highest) {
+                highest = newHighest;
+                saveHighest(highest);
+            }
+            buildLevel();
+        });
+    }
+
+    function showLevelCompleteOverlay(onDone) {
+        const wrapper = root.querySelector(".sokoban-wrapper");
+        if (!wrapper) return;
+        const overlay = document.createElement("div");
+        overlay.className = "sokoban-win-overlay";
+        const pinyin = (window.PINYIN_MAP && window.PINYIN_MAP[currentHanzi]) || "";
+        overlay.innerHTML = `
+            <div class="sokoban-win-card">
+                <div class="sokoban-win-mask" id="sokobanWinMask"></div>
+                <div class="sokoban-win-hanzi">${currentHanzi}</div>
+                <div class="sokoban-win-pinyin">${pinyin}</div>
+                <div class="sokoban-win-label">★ 第 ${String(level).padStart(2, "0")} 关 通关 ★</div>
+            </div>
+        `;
+        wrapper.appendChild(overlay);
+
+        // 用 mask 渲染像素拼字（作为放大版"过关纪念"）
+        const maskEl = overlay.querySelector("#sokobanWinMask");
+        for (let r = 0; r < MASK_SIZE; r++) {
+            for (let c = 0; c < MASK_SIZE; c++) {
+                const cell = document.createElement("div");
+                cell.className = "win-mask-cell" + (mask[r][c] ? " lit" : "");
+                cell.style.animationDelay = ((r + c) * 60) + "ms";
+                maskEl.appendChild(cell);
+            }
+        }
+
+        setTimeout(() => {
+            overlay.remove();
+            onDone();
+        }, 2000);
+    }
+
+    /* ===== 失败结算 ===== */
+
+    function endGame() {
+        gameActive = false;
+        stopEnemyLoop();
+        playGameOverSound();
+
+        const newHighest = Math.max(highest, level - 1);
+        if (newHighest > highest) {
+            highest = newHighest;
+            saveHighest(highest);
+        }
+
+        const wrapper = root.querySelector(".sokoban-wrapper");
+        if (!wrapper) return;
+        const overlay = document.createElement("div");
+        overlay.className = "sokoban-gameover";
+        overlay.innerHTML = `
+            <div class="sokoban-gameover-inner">
+                <div class="sokoban-go-title" id="sokobanGoTitle">游戏结束</div>
+                <pre class="sokoban-go-stats" id="sokobanGoStats"></pre>
+                <div class="sokoban-go-btns">
+                    <button class="sokoban-pixel-btn" id="sokobanRetry">[ 再来一局 ]</button>
+                    <button class="sokoban-pixel-btn" id="sokobanGoHome">[ 返回主界面 ]</button>
+                </div>
+            </div>
+        `;
+        wrapper.appendChild(overlay);
+
+        const lines = [
+            `> 关  卡 : ${String(level).padStart(2, "0")}`,
+            `> 步  数 : ${String(totalMoves).padStart(3, "0")}`,
+            `> 最  高 : ${String(highest).padStart(2, "0")}`,
+            `> 难  度 : ${DIFF_NAMES[baseDifficulty]}`,
+            `> ▮`,
+        ];
+        const pre = overlay.querySelector("#sokobanGoStats");
+        let idx = 0;
+        function typeNext() {
+            if (!overlay.parentNode) return;
+            if (idx >= lines.length) return;
+            pre.textContent = lines.slice(0, idx + 1).join("\n");
+            idx++;
+            setTimeout(typeNext, 240);
+        }
+        setTimeout(typeNext, 380);
+
+        overlay.querySelector("#sokobanRetry").addEventListener("click", () => {
+            overlay.remove();
+            startGame();
+        });
+        overlay.querySelector("#sokobanGoHome").addEventListener("click", onBack);
+    }
+
+    /* ===== Storage ===== */
+
+    function loadHighest() {
+        try {
+            return parseInt(localStorage.getItem(STORAGE_KEY)) || 0;
+        } catch (e) { return 0; }
+    }
+    function saveHighest(n) {
+        try { localStorage.setItem(STORAGE_KEY, n); } catch (e) { /* ignore */ }
+    }
+
+    /* ===== 输入 ===== */
+
+    function onKeyDown(e) {
+        if (!gameActive) return;
+        const now = performance.now();
+        if (now - lastKeyAt < KEY_MIN_INTERVAL) return;
+
+        let handled = true;
+        switch (e.key) {
+            case "ArrowUp": case "w": case "W":    tryMove(-1, 0); break;
+            case "ArrowDown": case "s": case "S":  tryMove(1, 0); break;
+            case "ArrowLeft": case "a": case "A":  tryMove(0, -1); break;
+            case "ArrowRight": case "d": case "D": tryMove(0, 1); break;
+            case "z": case "Z":                    undo(); break;
+            case "r": case "R":                    resetCurrentLevel(); break;
+            default: handled = false;
+        }
+        if (handled) {
+            e.preventDefault();
+            lastKeyAt = now;
+        }
+    }
+
+    function bindKeyboard() {
+        unbindKeyboard();
+        document.addEventListener("keydown", onKeyDown);
+    }
+    function unbindKeyboard() {
+        document.removeEventListener("keydown", onKeyDown);
+    }
+
+    function bindGridInputs() {
+        const grid = root.querySelector("#sokobanGrid");
+        if (!grid) return;
+        grid.addEventListener("pointerdown", onGridPointerDown);
+        grid.addEventListener("pointerup", onGridPointerUp);
+        grid.addEventListener("pointercancel", onGridPointerCancel);
+        grid.addEventListener("touchstart", e => e.preventDefault(), { passive: false });
+        grid.addEventListener("contextmenu", e => e.preventDefault());
+    }
+
+    function onGridPointerDown(e) {
+        if (!gameActive) return;
+        swipeStart = { x: e.clientX, y: e.clientY, id: e.pointerId };
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    function onGridPointerUp(e) {
+        if (!swipeStart || swipeStart.id !== e.pointerId) return;
+        const dx = e.clientX - swipeStart.x;
+        const dy = e.clientY - swipeStart.y;
+        swipeStart = null;
+        if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) return;
+        if (Math.abs(dx) > Math.abs(dy)) tryMove(0, Math.sign(dx));
+        else                              tryMove(Math.sign(dy), 0);
+    }
+    function onGridPointerCancel() { swipeStart = null; }
+
+    /* ===== mount / unmount ===== */
+
+    function mount() {
+        mounted = true;
+        renderStartScreen();
+    }
+
+    function unmount() {
+        mounted = false;
+        gameActive = false;
+        stopEnemyLoop();
+        unbindKeyboard();
+        unbindResize();
+        if (audioCtx) {
+            audioCtx.close().catch(() => {});
+            audioCtx = null;
+        }
+    }
+
+    return { mount, unmount };
+}
+
+window.createSokobanGame = createSokobanGame;

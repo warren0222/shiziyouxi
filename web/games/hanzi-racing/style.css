@@ -1,0 +1,942 @@
+/* ========== 汉字赛车 — 全局容器 & 夜间公路背景 ========== */
+
+.racing-wrapper {
+    width: 100%;
+    height: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: linear-gradient(180deg, #050818 0%, #0d1230 50%, #1a1f3d 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: #e0e0e0;
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "STHeiti", sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ========== 背景星空 ========== */
+
+.racing-bg-stars {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.racing-star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+@keyframes racingTwinkle {
+    0%, 100% { opacity: 0.2; }
+    50%      { opacity: 0.85; }
+}
+
+/* ========== 顶部头部 ========== */
+
+.racing-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(5, 8, 24, 0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 10;
+    border-bottom: 1px solid rgba(255, 215, 64, 0.18);
+}
+
+.racing-header h1 {
+    font-size: clamp(14px, 3.8vw, 20px);
+    color: #ffd740;
+    margin: 0;
+    text-shadow: 0 0 8px rgba(255, 215, 64, 0.35);
+}
+
+.racing-header .btn-back {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffd740;
+    font-size: clamp(12px, 3vw, 14px);
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.racing-header .btn-back:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* 命数 */
+
+.racing-lives {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: clamp(14px, 3.4vw, 18px);
+    line-height: 1;
+}
+
+.racing-heart {
+    transition: transform 0.2s;
+    filter: drop-shadow(0 0 4px rgba(239, 83, 80, 0.5));
+}
+
+.racing-heart.empty {
+    opacity: 0.45;
+    filter: none;
+}
+
+.racing-heart.full {
+    color: #ef5350;
+}
+
+/* ========== 状态栏 ========== */
+
+.racing-stats {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 2vw, 16px);
+    padding: 5px 8px;
+    background: rgba(5, 8, 24, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 10;
+    font-size: clamp(11px, 2.5vw, 14px);
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255, 215, 64, 0.1);
+}
+
+.racing-stats .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.racing-stats .stat-label {
+    color: #c4a85a;
+}
+
+.racing-stats .stat-value {
+    color: #fff;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+}
+
+.racing-stats .stat-value.score {
+    color: #69f0ae;
+    text-shadow: 0 0 6px rgba(105, 240, 174, 0.4);
+}
+
+.racing-stats .stat-value.combo {
+    color: #ffd740;
+    text-shadow: 0 0 6px rgba(255, 215, 64, 0.5);
+}
+
+.racing-stats .stat-value.distance {
+    color: #40c4ff;
+}
+
+.racing-stats .stat-value.highscore {
+    color: #ffab40;
+}
+
+/* ========== 顶部目标条 ========== */
+
+.racing-target-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(8px, 2vw, 14px);
+    padding: 8px 12px;
+    background: linear-gradient(90deg, rgba(255, 215, 64, 0.12), rgba(255, 215, 64, 0.22), rgba(255, 215, 64, 0.12));
+    border-top: 2px dashed rgba(255, 215, 64, 0.5);
+    border-bottom: 2px dashed rgba(255, 215, 64, 0.5);
+    z-index: 10;
+    flex-wrap: wrap;
+}
+
+.racing-target-label {
+    color: #c4a85a;
+    font-size: clamp(11px, 2.6vw, 13px);
+    letter-spacing: 1px;
+}
+
+.racing-target {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-shadow: 0 0 14px rgba(255, 215, 64, 0.7), 0 0 28px rgba(255, 215, 64, 0.35);
+    font-weight: bold;
+    min-width: 60px;
+    padding: 4px 14px;
+    border-radius: 10px;
+    background: rgba(255, 215, 64, 0.15);
+    border: 2px solid rgba(255, 215, 64, 0.55);
+    box-shadow: 0 0 18px rgba(255, 215, 64, 0.25), inset 0 0 10px rgba(255, 215, 64, 0.15);
+}
+
+.racing-target.is-hanzi {
+    font-size: clamp(28px, 7vw, 44px);
+    line-height: 1.1;
+}
+
+.racing-target.is-pinyin {
+    font-size: clamp(20px, 5vw, 30px);
+    line-height: 1.1;
+    letter-spacing: 1px;
+}
+
+.racing-target.flash {
+    animation: racingTargetFlash 0.5s ease-out;
+}
+
+.racing-target-hint {
+    color: #ffd740;
+    font-size: clamp(11px, 2.6vw, 13px);
+    opacity: 0.85;
+    background: rgba(255, 215, 64, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+@keyframes racingTargetFlash {
+    0%   { transform: scale(0.6); opacity: 0; }
+    60%  { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ========== 公路 ========== */
+
+.racing-road {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1a1a1f 0%, #2a2a30 100%);
+    cursor: grab;
+    z-index: 5;
+    touch-action: none;
+}
+
+.racing-road:active {
+    cursor: grabbing;
+}
+
+/* 中央虚线车道线（重复渐变 + 滚动动画） */
+.racing-lane-lines {
+    position: absolute;
+    inset: 0;
+    background-image:
+        repeating-linear-gradient(
+            180deg,
+            transparent 0px,
+            transparent 30px,
+            #ffd740 30px,
+            #ffd740 60px
+        );
+    background-size: 6px 60px;
+    background-repeat: repeat-y;
+    background-position: center top;
+    /* 中央位置 */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    animation: racingLaneScroll 0.5s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@keyframes racingLaneScroll {
+    from { background-position-y: 0; }
+    to   { background-position-y: 60px; }
+}
+
+/* 路边霓虹条 */
+.racing-roadside {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: linear-gradient(180deg, transparent, #40c4ff, transparent, #40c4ff, transparent);
+    background-size: 100% 80px;
+    animation: racingRoadsideScroll 0.5s linear infinite;
+    box-shadow: 0 0 10px rgba(64, 196, 255, 0.5);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.racing-roadside.left {
+    left: 4%;
+}
+
+.racing-roadside.right {
+    right: 4%;
+}
+
+@keyframes racingRoadsideScroll {
+    from { background-position-y: 0; }
+    to   { background-position-y: 80px; }
+}
+
+.racing-road.shake {
+    animation: racingRoadShake 0.4s ease-in-out;
+}
+
+@keyframes racingRoadShake {
+    0%, 100% { transform: translateX(0); }
+    20%  { transform: translateX(-6px); }
+    40%  { transform: translateX(6px); }
+    60%  { transform: translateX(-4px); }
+    80%  { transform: translateX(4px); }
+}
+
+/* ========== 赛车（纯 CSS 多造型，全部走 .style-* 修饰器） ========== */
+
+/* 公共骨架：car > glow + body(spoiler/canopy/stripe/lights/tails/fins) + thrust(flames) */
+.racing-car {
+    position: absolute;
+    left: 0;
+    bottom: 6%;
+    width: clamp(34px, 9vw, 44px);
+    height: clamp(54px, 14vw, 70px);
+    z-index: 8;
+    pointer-events: none;
+    transition: filter 0.15s;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55));
+}
+
+/* 起始页预览模式：放大、居中、不绝对定位 */
+.racing-car.preview {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    width: clamp(72px, 18vw, 100px);
+    height: clamp(120px, 30vw, 160px);
+    margin: 0 auto;
+    animation: racingCarPreviewFloat 2.4s ease-in-out infinite;
+}
+
+@keyframes racingCarPreviewFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+}
+
+.racing-car .car-glow {
+    position: absolute;
+    inset: -20% -10% -10% -10%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, var(--car-glow-color, transparent) 0%, transparent 65%);
+    filter: blur(6px);
+    z-index: 0;
+}
+
+.racing-car .car-body {
+    position: absolute;
+    inset: 6% 4% 18% 4%;
+    border-radius: 50% 50% 14px 14px / 60% 60% 14px 14px;
+    background: var(--car-body-gradient, linear-gradient(180deg, #ff6b6b, #c62828));
+    box-shadow:
+        inset 0 4px 6px rgba(255, 255, 255, 0.32),
+        inset 0 -4px 8px rgba(0, 0, 0, 0.4),
+        var(--car-body-shadow, 0 0 12px rgba(255, 82, 82, 0.5));
+    border: 1px solid var(--car-body-border, rgba(255, 255, 255, 0.15));
+    z-index: 1;
+}
+
+/* 尾翼（车尾向后突出） */
+.racing-car .car-spoiler {
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    bottom: -8%;
+    height: 14%;
+    background: var(--car-spoiler, linear-gradient(180deg, rgba(255,255,255,0.2), rgba(0,0,0,0.4)));
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+
+/* 驾驶舱玻璃 */
+.racing-car .car-canopy {
+    position: absolute;
+    left: 22%;
+    right: 22%;
+    top: 22%;
+    height: 36%;
+    background: var(--car-canopy, linear-gradient(180deg, #1a1f3d 0%, #2a3060 100%));
+    border-radius: 50% 50% 20% 20% / 70% 70% 30% 30%;
+    box-shadow:
+        inset 0 1px 2px rgba(255, 255, 255, 0.45),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* 中央条纹（科技感装饰线） */
+.racing-car .car-stripe {
+    position: absolute;
+    left: 50%;
+    top: 12%;
+    bottom: 12%;
+    width: 3px;
+    transform: translateX(-50%);
+    background: var(--car-stripe, linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.1)));
+    border-radius: 2px;
+    opacity: var(--car-stripe-opacity, 0.55);
+}
+
+/* 前灯 */
+.racing-car .car-headlight {
+    position: absolute;
+    top: 6%;
+    width: 16%;
+    height: 7%;
+    background: var(--car-headlight, #ffeb3b);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--car-headlight-glow, rgba(255, 235, 59, 0.95));
+}
+.racing-car .car-headlight.left  { left: 20%; }
+.racing-car .car-headlight.right { right: 20%; }
+
+/* 尾灯 */
+.racing-car .car-tail {
+    position: absolute;
+    bottom: 18%;
+    width: 18%;
+    height: 5%;
+    background: var(--car-tail, #ef5350);
+    border-radius: 3px;
+    box-shadow: 0 0 6px var(--car-tail-glow, rgba(239, 83, 80, 0.85));
+}
+.racing-car .car-tail.left  { left: 14%; }
+.racing-car .car-tail.right { right: 14%; }
+
+/* 侧鳍（仅部分造型可见） */
+.racing-car .car-fin {
+    position: absolute;
+    top: 38%;
+    width: 8%;
+    height: 32%;
+    background: var(--car-fin, transparent);
+    box-shadow: var(--car-fin-shadow, none);
+    opacity: var(--car-fin-opacity, 0);
+    border-radius: 2px;
+}
+.racing-car .car-fin.left  { left: -6%; transform: skewY(-8deg); }
+.racing-car .car-fin.right { right: -6%; transform: skewY(8deg); }
+
+/* 推进器火焰 */
+.racing-car .car-thrust {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2%;
+    height: 22%;
+    z-index: 0;
+    pointer-events: none;
+}
+.racing-car .thrust-flame {
+    position: absolute;
+    bottom: 0;
+    width: 18%;
+    height: 100%;
+    background: var(--car-flame, linear-gradient(180deg, transparent, #ff9800 40%, #ffeb3b));
+    border-radius: 50% 50% 30% 30%;
+    filter: blur(2px);
+    opacity: var(--car-flame-opacity, 0);
+    animation: racingFlameFlicker 0.18s ease-in-out infinite alternate;
+}
+.racing-car .thrust-flame.left  { left: 22%; }
+.racing-car .thrust-flame.right { right: 22%; }
+
+@keyframes racingFlameFlicker {
+    0%   { transform: scaleY(0.85) scaleX(0.95); opacity: var(--car-flame-opacity, 0); }
+    100% { transform: scaleY(1.15) scaleX(1.05); opacity: calc(var(--car-flame-opacity, 0) * 0.7); }
+}
+
+/* —— 造型 1：classic 经典红 —— */
+.racing-car.style-classic {
+    --car-glow-color: rgba(255, 82, 82, 0.5);
+    --car-body-gradient: linear-gradient(180deg, #ff6b6b 0%, #d32f2f 55%, #b71c1c 100%);
+    --car-body-shadow: 0 0 12px rgba(255, 82, 82, 0.45);
+    --car-body-border: rgba(255, 200, 200, 0.18);
+    --car-canopy: linear-gradient(180deg, #1a1f3d 0%, #2a3060 100%);
+    --car-stripe: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0));
+    --car-stripe-opacity: 0.45;
+    --car-spoiler: linear-gradient(180deg, #d32f2f, #6b0000);
+    --car-headlight: #ffeb3b;
+    --car-headlight-glow: rgba(255, 235, 59, 0.9);
+    --car-tail: #ff5252;
+    --car-tail-glow: rgba(255, 82, 82, 0.85);
+    --car-flame: linear-gradient(180deg, transparent, #ff9800 40%, #ffeb3b);
+    --car-flame-opacity: 0.85;
+}
+
+/* —— 造型 2：neon 霓虹蓝（科技感） —— */
+.racing-car.style-neon {
+    --car-glow-color: rgba(64, 196, 255, 0.7);
+    --car-body-gradient:
+        linear-gradient(180deg, #18ffff 0%, #00b8d4 40%, #006064 100%);
+    --car-body-shadow:
+        0 0 14px rgba(64, 196, 255, 0.7),
+        0 0 24px rgba(0, 229, 255, 0.4);
+    --car-body-border: rgba(178, 255, 255, 0.45);
+    --car-canopy: linear-gradient(180deg, rgba(0, 30, 60, 0.95), rgba(0, 60, 120, 0.95));
+    --car-stripe: linear-gradient(180deg, #18ffff, rgba(24,255,255,0));
+    --car-stripe-opacity: 0.95;
+    --car-spoiler: linear-gradient(180deg, #00e5ff, #006064);
+    --car-headlight: #18ffff;
+    --car-headlight-glow: rgba(24, 255, 255, 1);
+    --car-tail: #18ffff;
+    --car-tail-glow: rgba(24, 255, 255, 0.9);
+    --car-fin: linear-gradient(180deg, #18ffff, rgba(24,255,255,0));
+    --car-fin-shadow: 0 0 8px rgba(24, 255, 255, 0.7);
+    --car-fin-opacity: 1;
+    --car-flame: linear-gradient(180deg, transparent, #00e5ff 40%, #b3e5fc);
+    --car-flame-opacity: 0.95;
+}
+
+/* —— 造型 3：stealth 隐形黑（高端碳纤维） —— */
+.racing-car.style-stealth {
+    --car-glow-color: rgba(150, 150, 180, 0.3);
+    --car-body-gradient:
+        linear-gradient(180deg, #424242 0%, #212121 50%, #0d0d0d 100%);
+    --car-body-shadow:
+        0 0 10px rgba(255, 255, 255, 0.12),
+        inset 0 0 8px rgba(255, 255, 255, 0.06);
+    --car-body-border: rgba(255, 255, 255, 0.18);
+    --car-canopy: linear-gradient(180deg, #000 0%, #1a1a1a 100%);
+    --car-stripe: linear-gradient(180deg, #ff1744, rgba(255, 23, 68, 0));
+    --car-stripe-opacity: 1;
+    --car-spoiler: linear-gradient(180deg, #1a1a1a, #000);
+    --car-headlight: #fff;
+    --car-headlight-glow: rgba(255, 255, 255, 0.95);
+    --car-tail: #ff1744;
+    --car-tail-glow: rgba(255, 23, 68, 0.9);
+    --car-flame: linear-gradient(180deg, transparent, #ff1744 40%, #fff);
+    --car-flame-opacity: 0.65;
+}
+
+/* —— 造型 4：bolt 闪电黄（极速感） —— */
+.racing-car.style-bolt {
+    --car-glow-color: rgba(255, 215, 64, 0.6);
+    --car-body-gradient:
+        linear-gradient(180deg, #fff176 0%, #ffd740 50%, #ff8f00 100%);
+    --car-body-shadow:
+        0 0 14px rgba(255, 215, 64, 0.7),
+        0 0 24px rgba(255, 143, 0, 0.4);
+    --car-body-border: rgba(255, 240, 180, 0.6);
+    --car-canopy: linear-gradient(180deg, #1a1a1a 0%, #424242 100%);
+    --car-stripe: linear-gradient(180deg, #000, rgba(0,0,0,0));
+    --car-stripe-opacity: 0.85;
+    --car-spoiler: linear-gradient(180deg, #ff8f00, #4a2c00);
+    --car-headlight: #ffeb3b;
+    --car-headlight-glow: rgba(255, 235, 59, 1);
+    --car-tail: #ff6f00;
+    --car-tail-glow: rgba(255, 111, 0, 0.95);
+    --car-fin: linear-gradient(180deg, #ff8f00, rgba(255,143,0,0));
+    --car-fin-shadow: 0 0 6px rgba(255, 143, 0, 0.6);
+    --car-fin-opacity: 0.9;
+    --car-flame: linear-gradient(180deg, transparent, #ff6f00 40%, #ffeb3b);
+    --car-flame-opacity: 1;
+}
+
+/* 撞击闪烁 */
+.racing-car.flash {
+    animation: racingCarFlash 0.6s ease-out;
+}
+
+@keyframes racingCarFlash {
+    0%   { filter: brightness(2.6) saturate(1.8) drop-shadow(0 0 14px #fff); }
+    40%  { filter: brightness(1.5) saturate(1.4) drop-shadow(0 0 8px #ef5350); }
+    100% { filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55)); }
+}
+
+/* ========== 起始页 — 赛车选择器 ========== */
+
+.racing-car-picker {
+    width: 100%;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 6px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 215, 64, 0.18);
+}
+
+.racing-car-picker-label {
+    color: #c4a85a;
+    font-size: clamp(11px, 2.6vw, 13px);
+    margin: 0;
+    letter-spacing: 1px;
+}
+
+.racing-car-preview-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+}
+
+.racing-car-preview-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: clamp(130px, 32vw, 170px);
+}
+
+.racing-car-arrow {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 215, 64, 0.35);
+    background: rgba(255, 215, 64, 0.08);
+    color: #ffd740;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.racing-car-arrow:hover {
+    background: rgba(255, 215, 64, 0.2);
+    border-color: rgba(255, 215, 64, 0.7);
+    transform: scale(1.08);
+}
+
+.racing-car-name {
+    color: #fff;
+    font-size: clamp(13px, 3vw, 15px);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.racing-car-dots {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.racing-car-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 215, 64, 0.4);
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.racing-car-dot.active {
+    background: #ffd740;
+    border-color: #ffd740;
+    box-shadow: 0 0 6px rgba(255, 215, 64, 0.7);
+}
+
+/* ========== 路障 ========== */
+
+.racing-obstacle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(36px, 9.5vw, 48px);
+    height: clamp(36px, 9.5vw, 48px);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(80, 100, 200, 0.95), rgba(50, 60, 140, 0.95));
+    border: 2px solid rgba(140, 180, 255, 0.6);
+    color: #fff;
+    font-size: clamp(15px, 4vmin, 22px);
+    font-weight: bold;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45), 0 0 8px rgba(140, 180, 255, 0.3);
+    z-index: 6;
+    pointer-events: none;
+    will-change: transform;
+}
+
+.racing-obstacle.is-pinyin {
+    width: clamp(48px, 13vw, 66px);
+    height: clamp(30px, 8vw, 40px);
+    font-size: clamp(11px, 2.8vmin, 15px);
+    letter-spacing: 1px;
+    padding: 0 4px;
+}
+
+/* ========== 命中粒子 / 浮动文字 / 升级提示 ========== */
+
+.racing-particle {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 20;
+    animation: racingExplode 0.45s ease-out forwards;
+}
+
+@keyframes racingExplode {
+    0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); }
+}
+
+.racing-float-text {
+    position: absolute;
+    pointer-events: none;
+    z-index: 20;
+    font-size: clamp(14px, 3.5vw, 20px);
+    font-weight: bold;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    transform: translateX(-50%);
+    animation: racingFloatUp 0.85s ease-out forwards;
+}
+
+@keyframes racingFloatUp {
+    0%   { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -55px); }
+}
+
+.racing-level-up {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(24px, 7vw, 42px);
+    font-weight: bold;
+    color: #ffd740;
+    text-shadow: 0 0 20px rgba(255, 215, 64, 0.6), 0 0 40px rgba(255, 215, 64, 0.3);
+    z-index: 25;
+    pointer-events: none;
+    animation: racingLevelUpAnim 1.2s ease-out forwards;
+}
+
+@keyframes racingLevelUpAnim {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ========== 起始界面 ========== */
+
+.racing-start {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    gap: 14px;
+    padding: 20px;
+    text-align: center;
+}
+
+.racing-start h2 {
+    font-size: clamp(24px, 7vw, 38px);
+    color: #ffd740;
+    text-shadow: 0 0 16px rgba(255, 215, 64, 0.5);
+    margin-bottom: 4px;
+}
+
+.racing-start-subtitle {
+    color: #c4a85a;
+    font-size: clamp(13px, 3vw, 15px);
+}
+
+.racing-rules {
+    list-style: none;
+    padding: 0;
+    margin: 6px 0;
+    color: #cfd8dc;
+    font-size: clamp(12px, 2.8vw, 14px);
+    line-height: 1.9;
+    text-align: left;
+    max-width: 280px;
+}
+
+.racing-highscore-display {
+    color: #ffab40;
+    font-size: clamp(13px, 3vw, 15px);
+    margin: 4px 0;
+}
+
+.racing-btn {
+    padding: 12px 24px;
+    font-size: clamp(14px, 3.5vw, 17px);
+    border-radius: 10px;
+    border: 2px solid rgba(255, 215, 64, 0.4);
+    background: rgba(80, 60, 20, 0.5);
+    color: #ffd740;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    font-weight: bold;
+    width: 100%;
+    max-width: 280px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.racing-btn:hover {
+    background: rgba(255, 215, 64, 0.18);
+    border-color: rgba(255, 215, 64, 0.7);
+    box-shadow: 0 0 16px rgba(255, 215, 64, 0.3);
+    transform: translateY(-2px);
+}
+
+.racing-btn:active {
+    transform: translateY(0);
+}
+
+.racing-btn-primary {
+    background: linear-gradient(135deg, #ffb300, #ff6f00);
+    color: #1a1f3d;
+    border-color: rgba(255, 215, 64, 0.7);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.racing-btn-primary:hover {
+    background: linear-gradient(135deg, #ffc107, #ff8f00);
+    color: #1a1f3d;
+}
+
+.racing-btn-back {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #cfd8dc;
+    font-weight: normal;
+    margin-top: 4px;
+}
+
+.racing-btn-back:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+/* ========== 游戏结束叠层 ========== */
+
+.racing-gameover {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 8, 24, 0.88);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+}
+
+.racing-gameover-card {
+    background: linear-gradient(145deg, rgba(40, 20, 20, 0.97), rgba(20, 10, 30, 0.98));
+    border: 1px solid rgba(255, 215, 64, 0.35);
+    border-radius: 14px;
+    padding: clamp(20px, 5vw, 32px);
+    text-align: center;
+    max-width: 320px;
+    width: 88%;
+    box-shadow: 0 0 30px rgba(255, 82, 82, 0.25);
+}
+
+.racing-gameover-card h2 {
+    font-size: clamp(22px, 6vw, 32px);
+    color: #ff8a80;
+    margin-bottom: 12px;
+    text-shadow: 0 0 12px rgba(255, 82, 82, 0.4);
+}
+
+.racing-gameover-card .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: clamp(13px, 3.2vw, 16px);
+    border-bottom: 1px solid rgba(255, 215, 64, 0.12);
+}
+
+.racing-gameover-card .result-label {
+    color: #c4a85a;
+}
+
+.racing-gameover-card .result-value {
+    color: #fff;
+    font-weight: bold;
+}
+
+.racing-gameover-card .result-value.new-record {
+    color: #ffd740;
+    text-shadow: 0 0 8px rgba(255, 215, 64, 0.5);
+}
+
+.racing-gameover-card .new-record-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #ffd740, #ffab40);
+    color: #1a1f3d;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-left: 4px;
+    animation: racingRecordPulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes racingRecordPulse {
+    from { transform: scale(1); }
+    to   { transform: scale(1.08); }
+}
+
+.racing-gameover-card .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.racing-gameover-card .racing-btn {
+    margin: 0 auto;
+}
+
+/* ========== 响应式 ========== */
+
+@media (max-width: 480px) {
+    .racing-wrapper {
+        max-width: 100%;
+    }
+
+    .racing-stats {
+        gap: 5px;
+        padding: 4px 6px;
+        font-size: 11px;
+    }
+
+    .racing-target-bar {
+        padding: 6px 10px;
+        gap: 8px;
+    }
+
+    .racing-header {
+        padding: 6px 8px;
+    }
+
+    .racing-header h1 {
+        font-size: 14px;
+    }
+}

@@ -16,6 +16,20 @@ const games = [
         description: "看拼音或看汉字，点击匹配的下落卡片得分！",
         create: createShootingGame,
     },
+    {
+        id: "racing",
+        icon: "🏎️",
+        title: "汉字赛车",
+        description: "看顶部目标，左右驾驶赛车撞上正确的路障！",
+        create: createRacingGame,
+    },
+    {
+        id: "sokoban",
+        icon: "📦",
+        title: "汉字推箱子",
+        description: "推箱子点亮汉字笔画，避开巡逻敌！像素街机风。",
+        create: createSokobanGame,
+    },
 ];
 
 function stopCurrentGame() {
