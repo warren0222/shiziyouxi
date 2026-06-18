@@ -4,6 +4,7 @@ function createSokobanGame({ root, onBack }) {
     let gameActive = false;
     let isWinning = false;
 
+    let gameMode = "pixel";     // "pixel" = 像素字模式, "match" = 配对模式
     let baseDifficulty = 1;     // 0 EASY / 1 NORMAL / 2 HARD
     let level = 1;
     let lives = 3;
@@ -15,12 +16,16 @@ function createSokobanGame({ root, onBack }) {
     let playerStart = null;
     let playerEl = null;
 
-    let boxes = [];             // [{ y, x, el, onTarget }]
+    let boxes = [];             // [{ y, x, el, onTarget, pairId?, label?, dir? }]
     let enemies = [];           // [{ y, x, el, behavior, dir }]
 
     let grid = null;            // 2D char array '.' | '#' | 'T'
     let mask = null;
     let currentHanzi = "";
+
+    // 配对模式专用
+    let matchPairs = [];        // [{hanzi, pinyin, dir:"hp"|"ph"}]  hp=箱汉字→目标拼音
+    let matchTargets = [];      // [{y, x, label, pairId, type:"hanzi"|"pinyin"}]
 
     let history = [];           // undo 栈
     let usedHanzi = new Set();
@@ -45,6 +50,15 @@ function createSokobanGame({ root, onBack }) {
     const STORAGE_KEY = "sokoban_highest_level";
 
     const DIFF_NAMES = ["简单", "普通", "困难"];
+
+    // 配对模式常量
+    const MATCH_COLS = 13;
+    const MATCH_ROWS = 13;
+    const MATCH_PAIR_BASE = 3;      // 起步 3 对
+    const MATCH_PAIR_STEP = 2;      // 每 2 关 +1 对
+    const MATCH_PAIR_MAX = 7;       // 上限 7 对
+    const MATCH_PLAYER_Y = 11;
+    const MATCH_PLAYER_X = 6;
 
     // 手工绘制的 9×9 像素汉字字库
     // 设计原则：
@@ -81,7 +95,7 @@ function createSokobanGame({ root, onBack }) {
             "..#####..",
             ".........",
             ".........",
-            ".#######.",
+            "..#####..",
             ".........",
             ".........",
             "#########",
@@ -105,16 +119,16 @@ function createSokobanGame({ root, onBack }) {
             "....#....",
             "....#....",
             "....#....",
-            "....#....",
+            "..#.#....",
             "...##....",
-            "..#......",
+            ".........",
         ],
         "上": [
             ".........",
             "....#....",
             "....#....",
             "....#....",
-            "....#####",
+            "....####.",
             "....#....",
             "....#....",
             "....#....",
@@ -125,17 +139,17 @@ function createSokobanGame({ root, onBack }) {
             "#########",
             "....#....",
             "....#....",
-            "....#....",
             "....##...",
+            "....#.#..",
             "....#....",
             "....#....",
             ".........",
         ],
         "土": [
             ".........",
-            ".........",
-            "..#####..",
             "....#....",
+            "....#....",
+            "..#####..",
             "....#....",
             "....#....",
             "....#....",
@@ -145,7 +159,7 @@ function createSokobanGame({ root, onBack }) {
         "工": [
             ".........",
             ".........",
-            "#########",
+            ".#######.",
             "....#....",
             "....#....",
             "....#....",
@@ -156,7 +170,7 @@ function createSokobanGame({ root, onBack }) {
         "干": [
             ".........",
             "..#####..",
-            ".........",
+            "....#....",
             "#########",
             "....#....",
             "....#....",
@@ -166,7 +180,7 @@ function createSokobanGame({ root, onBack }) {
         ],
         "王": [
             ".........",
-            "#########",
+            ".#######.",
             "....#....",
             "....#....",
             ".#######.",
@@ -176,13 +190,13 @@ function createSokobanGame({ root, onBack }) {
             ".........",
         ],
         "主": [
-            ".........",
             "....#....",
-            ".........",
-            "..#####..",
-            ".........",
-            "#########",
-            ".........",
+            ".#######.",
+            "....#....",
+            "....#....",
+            ".#######.",
+            "....#....",
+            "....#....",
             "#########",
             ".........",
         ],
@@ -191,11 +205,11 @@ function createSokobanGame({ root, onBack }) {
             "#########",
             "....#....",
             "....#....",
-            ".######..",
-            "....#....",
-            "....#....",
-            "....#....",
+            ".#..####.",
+            ".#..#....",
+            ".#..#....",
             "#########",
+            ".........",
         ],
 
         // —— 框结构 ——
@@ -222,26 +236,26 @@ function createSokobanGame({ root, onBack }) {
             ".........",
         ],
         "目": [
-            "#########",
-            "#.......#",
-            "#########",
-            "#.......#",
-            "#########",
-            "#.......#",
-            "#########",
-            "#.......#",
-            "#########",
+            ".........",
+            ".#######.",
+            ".#.....#.",
+            ".#######.",
+            ".#.....#.",
+            ".#######.",
+            ".#.....#.",
+            ".#######.",
+            ".........",
         ],
         "田": [
+            ".........",
             "#########",
             "#...#...#",
             "#...#...#",
-            "#...#...#",
             "#########",
             "#...#...#",
             "#...#...#",
-            "#...#...#",
             "#########",
+            ".........",
         ],
         "回": [
             "#########",
@@ -300,20 +314,20 @@ function createSokobanGame({ root, onBack }) {
         ],
         "申": [
             "....#....",
-            "#########",
-            "#...#...#",
+            "....#....",
             "#########",
             "#...#...#",
             "#########",
             "....#....",
+            "#########",
             "....#....",
-            ".........",
+            "....#....",
         ],
         "古": [
             ".........",
             "....#....",
             "#########",
-            ".........",
+            "....#....",
             ".#######.",
             ".#.....#.",
             ".#.....#.",
@@ -332,15 +346,15 @@ function createSokobanGame({ root, onBack }) {
             ".........",
         ],
         "门": [
-            ".........",
-            "#########",
-            ".#.....#.",
-            ".#.....#.",
-            ".#.....#.",
-            ".#.....#.",
-            ".#.....#.",
-            ".#.....#.",
-            ".#.....#.",
+            "#........",
+            ".#.######",
+            "........#",
+            "#.......#",
+            "#.......#",
+            "#.......#",
+            "#.....#.#",
+            "#......##",
+            "#.......#",
         ],
         "月": [
             ".........",
@@ -350,8 +364,8 @@ function createSokobanGame({ root, onBack }) {
             ".#.....#.",
             ".#######.",
             ".#.....#.",
-            ".#.....#.",
-            ".#.....#.",
+            ".#...#.#.",
+            ".#....##.",
         ],
         "用": [
             ".........",
@@ -362,24 +376,24 @@ function createSokobanGame({ root, onBack }) {
             "#########",
             "#...#...#",
             "#...#...#",
-            "....#....",
+            ".........",
         ],
         "车": [
-            ".........",
+            "......#..",
             "#########",
             "....#....",
+            "...#.....",
+            "..#.#....",
             ".#######.",
-            ".#.....#.",
-            ".#######.",
-            "....#....",
             "....#....",
             "#########",
+            "....#....",
         ],
 
         // —— 撇捺类（严格 45°）——
         "人": [
             ".........",
-            ".........",
+            "....#....",
             "....#....",
             "...#.#...",
             "..#...#..",
@@ -391,8 +405,8 @@ function createSokobanGame({ root, onBack }) {
         "八": [
             ".........",
             ".........",
-            ".........",
-            "...#.#...",
+            "....#....",
+            ".....#...",
             "..#...#..",
             ".#.....#.",
             "#.......#",
@@ -412,7 +426,7 @@ function createSokobanGame({ root, onBack }) {
         ],
         "天": [
             ".#######.",
-            ".........",
+            "....#....",
             "#########",
             "....#....",
             "....#....",
@@ -422,11 +436,11 @@ function createSokobanGame({ root, onBack }) {
             "#.......#",
         ],
         "夫": [
-            ".........",
-            "#########",
-            ".........",
+            "....#....",
+            "....#....",
             ".#######.",
             "....#....",
+            "#########",
             "...#.#...",
             "..#...#..",
             ".#.....#.",
@@ -439,8 +453,8 @@ function createSokobanGame({ root, onBack }) {
             "#########",
             "....#....",
             "...#.#...",
-            "..#.#.#..",
-            ".#.....#.",
+            "..##..#..",
+            ".#..#..#.",
             "#.......#",
         ],
         "木": [
@@ -449,35 +463,35 @@ function createSokobanGame({ root, onBack }) {
             "....#....",
             "#########",
             "....#....",
-            "...#.#...",
-            "..#...#..",
-            ".#.....#.",
-            "#.......#",
+            "...###...",
+            "..#.#.#..",
+            ".#..#..#.",
+            "#...#...#",
         ],
         "本": [
-            ".........",
             "....#....",
             "....#....",
             "#########",
+            "...###...",
+            "..#.#.#..",
+            ".#..#..#.",
+            "#..###..#",
             "....#....",
-            "...#.#...",
-            "..#####..",
-            ".#.....#.",
-            "#.......#",
+            "....#....",
         ],
         "禾": [
-            ".........",
-            "...####..",
+            "......#..",
+            "...###...",
             "....#....",
             "#########",
             "....#....",
-            "...#.#...",
-            "..#...#..",
-            ".#.....#.",
-            "#.......#",
+            "...###...",
+            "..#.#.#..",
+            ".#..#..#.",
+            "#...#...#",
         ],
         "米": [
-            "#...#...#",
+            "....#....",
             ".#..#..#.",
             "..#.#.#..",
             "...###...",
@@ -488,10 +502,10 @@ function createSokobanGame({ root, onBack }) {
             "#...#...#",
         ],
         "火": [
-            ".........",
-            ".#.....#.",
-            "..#...#..",
-            ".........",
+            "....#....",
+            ".#..#..#.",
+            "..#.#.#..",
+            "....#....",
             "....#....",
             "...#.#...",
             "..#...#..",
@@ -512,59 +526,59 @@ function createSokobanGame({ root, onBack }) {
             "#.......#",
         ],
         "力": [
-            ".........",
-            "########.",
-            "......#..",
-            "......#..",
-            "..#####..",
             "...#.....",
-            "..#......",
-            ".#.......",
-            "#........",
+            "...#.....",
+            "########.",
+            "...#...#.",
+            "...#...#.",
+            "...#...#.",
+            "..#..#.#.",
+            ".#....##.",
+            ".........",
         ],
         "刀": [
             ".........",
+            ".........",
             "########.",
-            "......#..",
-            ".....#...",
-            "....#....",
-            "...#.....",
-            "..#......",
-            ".#.......",
-            "#........",
+            "...#...#.",
+            "...#...#.",
+            "...#...#.",
+            "..#..#.#.",
+            ".#....##.",
+            ".........",
         ],
         "了": [
             ".........",
-            "#########",
+            ".#######.",
             "......#..",
             ".....#...",
             "....#....",
             "....#....",
             "....#....",
-            "....#....",
-            "....#....",
+            "..#.#....",
+            "...##....",
         ],
         "子": [
             ".........",
-            "#########",
+            ".#######.",
             "......#..",
             ".....#...",
+            "#########",
             "....#....",
             "....#....",
-            ".#######.",
-            "....#....",
-            "....#....",
+            "..#.#....",
+            "...##....",
         ],
         "女": [
             ".........",
-            ".#.....#.",
-            "..#...#..",
-            "...#.#...",
-            ".#######.",
+            "....#....",
+            "#########",
+            "...#..#..",
+            "..#..#...",
+            ".##.#....",
             "...#.....",
-            "..#......",
-            ".#.......",
-            "#........",
+            "..#.#....",
+            ".#...#...",
         ],
 
         // —— 其他 ——
@@ -573,27 +587,27 @@ function createSokobanGame({ root, onBack }) {
             "#########",
             "...#.....",
             "..#......",
-            ".#######.",
-            ".#.....#.",
-            ".#.....#.",
-            ".#.....#.",
-            ".#######.",
+            ".########",
+            "#.#.....#",
+            "..#.....#",
+            "..#######",
+            ".........",
         ],
         "可": [
             ".........",
             "#########",
-            "....#....",
-            "..#####..",
-            "..#...#..",
-            "..#####..",
-            "......#..",
-            ".....#...",
-            "....#....",
+            ".......#.",
+            ".#####.#.",
+            ".#...#.#.",
+            ".#####.#.",
+            ".......#.",
+            ".....#.#.",
+            "......##.",
         ],
         "半": [
-            "...#.#...",
-            "..#...#..",
-            ".........",
+            "....#....",
+            "..#.#.#..",
+            "...###...",
             ".#######.",
             "....#....",
             "#########",
@@ -603,25 +617,25 @@ function createSokobanGame({ root, onBack }) {
         ],
         "生": [
             ".........",
-            "....#....",
-            "...###...",
-            ".........",
-            "#########",
+            ".#..#....",
+            ".#######.",
+            "#...#....",
             "....#....",
             ".#######.",
+            "....#....",
             "....#....",
             "#########",
         ],
         "小": [
-            ".........",
             "....#....",
             "....#....",
             "....#....",
-            "....#....",
-            "...###...",
             "..#.#.#..",
             ".#..#..#.",
+            "#...#...#",
             "....#....",
+            "..#.#....",
+            "...##....",
         ],
     };
 
@@ -709,7 +723,11 @@ function createSokobanGame({ root, onBack }) {
 
     /* ===== 关卡生成 ===== */
 
-    function inBounds(y, x) { return y >= 0 && y < ROWS && x >= 0 && x < COLS; }
+    function inBounds(y, x) {
+        const rows = grid ? grid.length : ROWS;
+        const cols = grid && grid[0] ? grid[0].length : COLS;
+        return y >= 0 && y < rows && x >= 0 && x < cols;
+    }
 
     function createEmptyGrid() {
         const g = [];
@@ -772,9 +790,11 @@ function createSokobanGame({ root, onBack }) {
 
         // 收集候选：正交 4 邻居全部是非墙、非边界（即贴边和贴墙的位置都被排除）
         // 这样玩家从任意方向都能进入箱子的对面，不会出现"贴边推不动"的卡死局面
+        const gRows = g.length;
+        const gCols = g[0] ? g[0].length : 0;
         const candidates = [];
-        for (let r = 2; r < ROWS - 2; r++) {
-            for (let c = 2; c < COLS - 2; c++) {
+        for (let r = 2; r < gRows - 2; r++) {
+            for (let c = 2; c < gCols - 2; c++) {
                 if (g[r][c] !== "." && g[r][c] !== "T") continue;
                 if (g[r][c] === "T") continue;
                 if (banned.has(r + "," + c)) continue;
@@ -790,9 +810,18 @@ function createSokobanGame({ root, onBack }) {
 
         // 偏好：靠近边角、远离目标；用 shuffle 取前 count 个
         shuffle(candidates);
-        for (let i = 0; i < count && i < candidates.length; i++) {
-            const pos = candidates[i];
+        // 已放箱子的位置集合：用于保证任意两个箱子之间至少隔 1 格
+        // （否则一旦相邻又贴墙/角落，箱子之间会互相挡死，玩家推不动）
+        const occupied = new Set();
+        for (const pos of candidates) {
+            if (placed.length >= count) break;
+            // 4 个正交邻居中不能已经有别的箱子
+            const tooClose = [[-1,0],[1,0],[0,-1],[0,1]].some(([dy, dx]) =>
+                occupied.has((pos.y + dy) + "," + (pos.x + dx))
+            );
+            if (tooClose) continue;
             placed.push({ y: pos.y, x: pos.x, onTarget: false });
+            occupied.add(pos.y + "," + pos.x);
             banned.add(pos.y + "," + pos.x);
         }
         return placed;
@@ -815,9 +844,11 @@ function createSokobanGame({ root, onBack }) {
             banned.add((playerStart.y + dy) + "," + (playerStart.x + dx));
         });
 
+        const gRows = g.length;
+        const gCols = g[0] ? g[0].length : 0;
         const candidates = [];
-        for (let r = 1; r < ROWS - 1; r++) {
-            for (let c = 1; c < COLS - 1; c++) {
+        for (let r = 1; r < gRows - 1; r++) {
+            for (let c = 1; c < gCols - 1; c++) {
                 if (g[r][c] !== ".") continue;
                 if (banned.has(r + "," + c)) continue;
                 candidates.push({ y: r, x: c });
@@ -852,13 +883,15 @@ function createSokobanGame({ root, onBack }) {
             banned.add((playerStart.y + dy) + "," + (playerStart.x + dx));
         }
         // 不在目标格上出生
-        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+        const gRows = g.length;
+        const gCols = g[0] ? g[0].length : 0;
+        for (let r = 0; r < gRows; r++) for (let c = 0; c < gCols; c++) {
             if (g[r][c] === "T" || g[r][c] === "#") banned.add(r + "," + c);
         }
 
         const candidates = [];
-        for (let r = 1; r < ROWS - 1; r++) {
-            for (let c = 1; c < COLS - 1; c++) {
+        for (let r = 1; r < gRows - 1; r++) {
+            for (let c = 1; c < gCols - 1; c++) {
                 if (g[r][c] !== ".") continue;
                 if (banned.has(r + "," + c)) continue;
                 candidates.push({ y: r, x: c });
@@ -906,6 +939,26 @@ function createSokobanGame({ root, onBack }) {
         if (tier === 3) return { walls: 6, enemies: 1, enemySpeed: 600, behaviors: ["patrol"] };
         if (tier === 4) return { walls: 8, enemies: 2, enemySpeed: 600, behaviors: ["patrol", "patrol"] };
         return { walls: 10, enemies: 2, enemySpeed: 500, behaviors: ["patrol", "patrol"] };
+    }
+
+    /* ===== 配对模式专属难度 ===== */
+
+    function computeMatchTier(level, baseDiff) {
+        if (baseDiff === 0) {
+            // 简单：极少墙，无敌人
+            return { walls: 1, enemies: 0, enemySpeed: 0, behaviors: [] };
+        }
+        if (baseDiff === 1) {
+            // 普通：少量墙，无敌人
+            const walls = 2 + Math.floor(level / 4);
+            return { walls, enemies: 0, enemySpeed: 0, behaviors: [] };
+        }
+        // 困难：第1关就有敌人，数量和速度随关卡增长但有上限
+        const walls = 3 + Math.floor(level / 4);
+        const enemyCount = Math.min(3, 1 + Math.floor((level - 1) / 4));
+        const enemySpeed = Math.max(400, 750 - (level - 1) * 30);
+        const behaviors = Array(enemyCount).fill("patrol");
+        return { walls, enemies: enemyCount, enemySpeed, behaviors };
     }
 
     /* ===== 关卡构建（数据 → DOM） ===== */
@@ -957,6 +1010,169 @@ function createSokobanGame({ root, onBack }) {
         return { y: 1, x: 1, face: "up" };
     }
 
+    /* ===== 配对模式关卡构建 ===== */
+
+    function buildLevelMatch() {
+        // 1. 计算本关配对数
+        const pairCount = Math.min(MATCH_PAIR_MAX,
+            MATCH_PAIR_BASE + Math.floor((level - 1) / MATCH_PAIR_STEP));
+
+        // 2. 从 HANZI_LIST + PINYIN_MAP 选字（有拼音的才用）
+        const allHanzi = (window.HANZI_LIST || []);
+        const pinyinMap = (window.PINYIN_MAP || {});
+        const eligible = allHanzi.filter(h => pinyinMap[h]);
+        shuffle(eligible);
+
+        matchPairs = [];
+        const picked = new Set();
+        for (let i = 0; i < eligible.length && matchPairs.length < pairCount; i++) {
+            const h = eligible[i];
+            if (picked.has(h)) continue;
+            picked.add(h);
+            const py = pinyinMap[h];
+            // 随机分配方向：hp=箱汉字→目标拼音, ph=箱拼音→目标汉字
+            const dir = Math.random() < 0.5 ? "hp" : "ph";
+            matchPairs.push({ hanzi: h, pinyin: py, dir });
+        }
+
+        // 3. 创建 9×9 网格 + 边框墙
+        grid = [];
+        for (let r = 0; r < MATCH_ROWS; r++) {
+            const row = [];
+            for (let c = 0; c < MATCH_COLS; c++) row.push(".");
+            grid.push(row);
+        }
+        // 边框墙
+        for (let c = 0; c < MATCH_COLS; c++) { grid[0][c] = "#"; grid[MATCH_ROWS-1][c] = "#"; }
+        for (let r = 0; r < MATCH_ROWS; r++) { grid[r][0] = "#"; grid[r][MATCH_COLS-1] = "#"; }
+
+        // 4. 放目标格
+        matchTargets = [];
+        const usedCells = new Set();
+        const targetPositions = pickScatteredCells(grid, matchPairs.length, usedCells);
+        matchPairs.forEach((pair, idx) => {
+            const pos = targetPositions[idx];
+            const type = pair.dir === "hp" ? "pinyin" : "hanzi";   // 目标格类型
+            const label = pair.dir === "hp" ? pair.pinyin : pair.hanzi;  // 目标格标签
+            grid[pos.y][pos.x] = "T";
+            matchTargets.push({ y: pos.y, x: pos.x, label, pairId: idx, type });
+            usedCells.add(pos.y + "," + pos.x);
+        });
+
+        // 5. 玩家起点
+        playerStart = { y: MATCH_PLAYER_Y, x: MATCH_PLAYER_X, face: "up" };
+        // 如果起点被占，找替代
+        if (grid[playerStart.y][playerStart.x] !== ".") {
+            playerStart = findFirstEmptyInGrid(grid, MATCH_ROWS, MATCH_COLS);
+        }
+        usedCells.add(playerStart.y + "," + playerStart.x);
+        player = { y: playerStart.y, x: playerStart.x, face: "up" };
+
+        // 6. 放箱子（与目标分离，不放在目标格上）
+        boxes = [];
+        const boxPositions = pickScatteredCells(grid, matchPairs.length, usedCells);
+        matchPairs.forEach((pair, idx) => {
+            const pos = boxPositions[idx];
+            const label = pair.dir === "hp" ? pair.hanzi : pair.pinyin;  // 箱子标签
+            boxes.push({
+                y: pos.y, x: pos.x, onTarget: false,
+                pairId: idx, label, dir: pair.dir
+            });
+            usedCells.add(pos.y + "," + pos.x);
+        });
+
+        // 6.5 配对数≥5时加1个干扰箱（无目标，只占空间碍事）
+        if (pairCount >= 5) {
+            // 选一个与现有配对不重复的汉字做标签
+            const usedLabels = new Set(matchPairs.map(p => p.hanzi));
+            const distractorHanzi = allHanzi.find(h => pinyinMap[h] && !usedLabels.has(h));
+            const distractorLabel = distractorHanzi || "?";
+            const distractorPositions = pickScatteredCells(grid, 1, usedCells);
+            if (distractorPositions.length > 0) {
+                const dp = distractorPositions[0];
+                boxes.push({
+                    y: dp.y, x: dp.x, onTarget: false,
+                    pairId: -1, label: distractorLabel, dir: "hp",
+                    isDistractor: true
+                });
+                usedCells.add(dp.y + "," + dp.x);
+            }
+        }
+
+        // 7. 按配对模式专属难度放内墙和敌人
+        const tier = computeMatchTier(level, baseDifficulty);
+        addInteriorWalls(grid, tier.walls, matchTargets, playerStart, boxes);
+        enemies = spawnEnemies(grid, tier.enemies, tier.enemySpeed, tier.behaviors, playerStart, boxes);
+
+        moves = 0;
+        history = [];
+        isWinning = false;
+        currentHanzi = matchPairs.map(p => p.hanzi).join("");
+
+        renderGrid();
+        renderActors();
+        renderHUD();
+        renderTargetBar();
+        fitGrid();
+
+        startEnemyLoop(tier.enemySpeed);
+    }
+
+    /** 在可玩区域随机选 count 个位置，保证不贴墙（四邻非墙）、互不相邻 */
+    function pickScatteredCells(g, count, usedCells) {
+        const gRows = g.length;
+        const gCols = g[0] ? g[0].length : 0;
+
+        // 候选条件：r/c 在 [2, N-3] 范围内，且四邻都不是墙，确保玩家总能从对面推
+        const candidates = [];
+        for (let r = 2; r < gRows - 2; r++) {
+            for (let c = 2; c < gCols - 2; c++) {
+                if (g[r][c] !== "." && g[r][c] !== "T") continue;
+                if (usedCells.has(r + "," + c)) continue;
+                // 四个正交邻居必须都不是墙
+                const allSidesOpen = [[-1,0],[1,0],[0,-1],[0,1]].every(([dy, dx]) => {
+                    const ny = r + dy, nx = c + dx;
+                    return ny >= 0 && ny < gRows && nx >= 0 && nx < gCols && g[ny][nx] !== "#";
+                });
+                if (!allSidesOpen) continue;
+                candidates.push({ y: r, x: c });
+            }
+        }
+        shuffle(candidates);
+
+        const result = [];
+        const occupied = new Set(usedCells);
+        // 第一轮：严格不相邻（保证箱子之间有操作空间）
+        for (const pos of candidates) {
+            if (result.length >= count) break;
+            const tooClose = [[-1,0],[1,0],[0,-1],[0,1]].some(([dy, dx]) =>
+                occupied.has((pos.y + dy) + "," + (pos.x + dx))
+            );
+            if (tooClose) continue;
+            result.push(pos);
+            occupied.add(pos.y + "," + pos.x);
+        }
+        // 第二轮：退化为只排除已占位置（容忍相邻，但仍不贴墙）
+        if (result.length < count) {
+            for (const pos of candidates) {
+                if (result.length >= count) break;
+                if (occupied.has(pos.y + "," + pos.x)) continue;
+                result.push(pos);
+                occupied.add(pos.y + "," + pos.x);
+            }
+        }
+        return result;
+    }
+
+    function findFirstEmptyInGrid(g, rows, cols) {
+        for (let r = rows - 2; r >= 1; r--) {
+            for (let c = 1; c < cols - 1; c++) {
+                if (g[r][c] === ".") return { y: r, x: c, face: "up" };
+            }
+        }
+        return { y: 1, x: 1, face: "up" };
+    }
+
     /* ===== 渲染：起始页 / 游戏页 / 结算页 ===== */
 
     function renderStartScreen() {
@@ -972,6 +1188,12 @@ function createSokobanGame({ root, onBack }) {
                         <p class="sokoban-pixel-sub">推箱子点亮汉字笔画</p>
 
                         <div class="sokoban-arcade-menu">
+                            <div class="sokoban-arcade-prompt">▶ 选择模式</div>
+                            <button class="sokoban-pixel-btn mode" data-mode="pixel">[ 像素字模式 ]<small>推箱子拼出像素汉字</small></button>
+                            <button class="sokoban-pixel-btn mode" data-mode="match">[ 配对模式 ]<small>汉字↔拼音配对推箱</small></button>
+                        </div>
+
+                        <div class="sokoban-arcade-menu sokoban-diff-menu" style="display:none">
                             <div class="sokoban-arcade-prompt">▶ 选择难度</div>
                             <button class="sokoban-pixel-btn diff" data-diff="0">[ 简单 ]<small>无墙 · 无敌人</small></button>
                             <button class="sokoban-pixel-btn diff" data-diff="1">[ 普通 ]<small>有墙 · 无敌人</small></button>
@@ -989,6 +1211,16 @@ function createSokobanGame({ root, onBack }) {
             </div>
         `;
 
+        // 模式选择 → 显示难度
+        root.querySelectorAll(".sokoban-pixel-btn.mode").forEach(btn => {
+            btn.addEventListener("click", () => {
+                gameMode = btn.dataset.mode;
+                root.querySelectorAll(".sokoban-pixel-btn.mode").forEach(b =>
+                    b.style.borderColor = b === btn ? "#ffeb3b" : "");
+                root.querySelector(".sokoban-diff-menu").style.display = "";
+            });
+        });
+
         root.querySelectorAll(".sokoban-pixel-btn.diff").forEach(btn => {
             btn.addEventListener("click", () => {
                 baseDifficulty = parseInt(btn.dataset.diff);
@@ -999,6 +1231,12 @@ function createSokobanGame({ root, onBack }) {
     }
 
     function renderGameScreen() {
+        const isMatch = gameMode === "match";
+        const gridCols = isMatch ? MATCH_COLS : COLS;
+        const gridRows = isMatch ? MATCH_ROWS : ROWS;
+        const title = isMatch ? "📦 汉字配对" : "📦 汉字推箱子";
+        const litLabel = isMatch ? "配对" : "点亮";
+
         const wrapper = root.querySelector(".sokoban-wrapper");
         wrapper.innerHTML = `
             <div class="sokoban-crt-frame">
@@ -1006,7 +1244,7 @@ function createSokobanGame({ root, onBack }) {
 
                 <header class="sokoban-topbar">
                     <button class="sokoban-pixel-btn small" id="sokobanBack">[ ← 返回 ]</button>
-                    <div class="sokoban-title">📦 汉字推箱子</div>
+                    <div class="sokoban-title">${title}</div>
                 </header>
 
                 <div class="sokoban-target-bar" id="sokobanTargetBar">
@@ -1028,7 +1266,7 @@ function createSokobanGame({ root, onBack }) {
                     </aside>
 
                     <main class="sokoban-stage" id="sokobanStage">
-                        <div class="sokoban-grid" id="sokobanGrid" style="--cols:${COLS}; --rows:${ROWS}"></div>
+                        <div class="sokoban-grid" id="sokobanGrid" style="--cols:${gridCols}; --rows:${gridRows}"></div>
                     </main>
 
                     <aside class="sokoban-side right">
@@ -1037,7 +1275,7 @@ function createSokobanGame({ root, onBack }) {
                             <div class="side-value" id="sokobanMoves">000</div>
                         </div>
                         <div class="sokoban-side-block">
-                            <div class="side-label">点亮</div>
+                            <div class="side-label">${litLabel}</div>
                             <div class="side-value" id="sokobanLit">0/0</div>
                         </div>
                         <div class="sokoban-side-block">
@@ -1073,14 +1311,30 @@ function createSokobanGame({ root, onBack }) {
         if (!gridEl) return;
         gridEl.innerHTML = "";
 
-        for (let r = 0; r < ROWS; r++) {
-            for (let c = 0; c < COLS; c++) {
+        const rows = grid.length;
+        const cols = grid[0] ? grid[0].length : 0;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
                 const cell = document.createElement("div");
                 cell.className = "sokoban-cell";
                 cell.style.setProperty("--x", c);
                 cell.style.setProperty("--y", r);
                 if (grid[r][c] === "#") cell.classList.add("wall");
-                else if (grid[r][c] === "T") cell.classList.add("target");
+                else if (grid[r][c] === "T") {
+                    cell.classList.add("target");
+                    // 配对模式：目标格显示标签
+                    if (gameMode === "match") {
+                        const mt = matchTargets.find(t => t.y === r && t.x === c);
+                        if (mt) {
+                            cell.classList.add("type-" + mt.type);
+                            const label = document.createElement("span");
+                            label.className = "target-label";
+                            label.textContent = mt.label;
+                            cell.appendChild(label);
+                        }
+                    }
+                }
                 gridEl.appendChild(cell);
             }
         }
@@ -1095,15 +1349,45 @@ function createSokobanGame({ root, onBack }) {
             const el = document.createElement("div");
             el.className = "sokoban-actor sokoban-box";
             if (b.onTarget) el.classList.add("on-target");
+            if (b.isDistractor) el.classList.add("distractor");
             el.style.setProperty("--x", b.x);
             el.style.setProperty("--y", b.y);
+
+            // 配对模式：箱子显示标签
+            if (gameMode === "match" && b.label) {
+                el.classList.add("has-label", "dir-" + (b.dir || "hp"));
+                const label = document.createElement("span");
+                label.className = "box-label";
+                label.textContent = b.label;
+                // 拼音标签缩小字号
+                if (b.dir === "ph") {
+                    const len = b.label.length;
+                    const sizeFactor =
+                        len <= 2 ? 0.56 :
+                        len <= 3 ? 0.46 :
+                        len <= 4 ? 0.36 :
+                        len <= 5 ? 0.30 : 0.26;
+                    label.style.fontSize = `calc(var(--cell) * ${sizeFactor})`;
+                    label.style.fontWeight = "400";
+                } else {
+                    label.style.fontSize = `calc(var(--cell) * 0.68)`;
+                }
+                el.appendChild(label);
+            }
+
             gridEl.appendChild(el);
             b.el = el;
         });
 
         // enemies：单格 tile，整格内显示当前汉字的「全拼」（含声调）
-        const enemyPinyin =
-            (window.PINYIN_MAP && window.PINYIN_MAP[currentHanzi]) || currentHanzi || "?";
+        let enemyPinyin;
+        if (gameMode === "match") {
+            // 配对模式：敌人显示随机一个配对汉字的拼音
+            const rp = matchPairs.length > 0 ? matchPairs[Math.floor(Math.random() * matchPairs.length)] : null;
+            enemyPinyin = rp ? rp.pinyin : "?";
+        } else {
+            enemyPinyin = (window.PINYIN_MAP && window.PINYIN_MAP[currentHanzi]) || currentHanzi || "?";
+        }
         enemies.forEach(e => {
             const el = document.createElement("div");
             el.className = "sokoban-actor sokoban-enemy";
@@ -1148,6 +1432,11 @@ function createSokobanGame({ root, onBack }) {
         b.el.style.setProperty("--x", b.x);
         b.el.style.setProperty("--y", b.y);
         b.el.classList.toggle("on-target", !!b.onTarget);
+        // 配对模式：正确匹配加 correct-match（干扰箱不算）
+        if (gameMode === "match") {
+            const isCorrect = b.onTarget && b.pairId !== undefined && b.pairId !== -1;
+            b.el.classList.toggle("correct-match", isCorrect);
+        }
     }
 
     function applyPlayerTransform() {
@@ -1169,8 +1458,15 @@ function createSokobanGame({ root, onBack }) {
     function renderTargetBar() {
         const hzEl = root.querySelector("#sokobanTargetHanzi");
         const pyEl = root.querySelector("#sokobanTargetPinyin");
-        if (hzEl) hzEl.textContent = currentHanzi || "—";
-        if (pyEl) pyEl.textContent = (window.PINYIN_MAP && window.PINYIN_MAP[currentHanzi]) || "";
+        if (gameMode === "match") {
+            const lit = boxes.filter(b => b.onTarget).length;
+            const total = boxes.length;
+            if (hzEl) hzEl.textContent = `配对 ${lit}/${total}`;
+            if (pyEl) pyEl.textContent = "";
+        } else {
+            if (hzEl) hzEl.textContent = currentHanzi || "—";
+            if (pyEl) pyEl.textContent = (window.PINYIN_MAP && window.PINYIN_MAP[currentHanzi]) || "";
+        }
     }
 
     /* ===== 自适应：计算格子尺寸塞满可用空间 ===== */
@@ -1184,8 +1480,10 @@ function createSokobanGame({ root, onBack }) {
         const availW = rect.width - 8;
         const availH = rect.height - 8;
         if (availW <= 0 || availH <= 0) return;
-        const cellByW = Math.floor(availW / COLS);
-        const cellByH = Math.floor(availH / ROWS);
+        const cols = grid ? (grid[0] ? grid[0].length : COLS) : COLS;
+        const rows = grid ? grid.length : ROWS;
+        const cellByW = Math.floor(availW / cols);
+        const cellByH = Math.floor(availH / rows);
         // 范围 22–56px，避免过小或撑爆
         const cell = Math.max(22, Math.min(56, Math.min(cellByW, cellByH)));
         gridEl.style.setProperty("--cell", cell + "px");
@@ -1249,7 +1547,8 @@ function createSokobanGame({ root, onBack }) {
         isWinning = false;
 
         renderGameScreen();
-        buildLevel();
+        if (gameMode === "match") buildLevelMatch();
+        else buildLevel();
 
         bindKeyboard();
     }
@@ -1258,7 +1557,8 @@ function createSokobanGame({ root, onBack }) {
         if (!gameActive) return;
         stopEnemyLoop();
         // 同关，但重新生成（保证一定能解开新布局）
-        buildLevel();
+        if (gameMode === "match") buildLevelMatch();
+        else buildLevel();
     }
 
     /* ===== 移动 / 推箱子 ===== */
@@ -1289,7 +1589,13 @@ function createSokobanGame({ root, onBack }) {
             pushHistory();
             box.y = by; box.x = bx;
             const wasOnTarget = box.onTarget;
-            box.onTarget = isTargetCell(by, bx);
+            // 配对模式：只有正确匹配才算 onTarget
+            if (gameMode === "match") {
+                const mt = matchTargets.find(t => t.pairId === box.pairId);
+                box.onTarget = !!(mt && mt.y === by && mt.x === bx);
+            } else {
+                box.onTarget = isTargetCell(by, bx);
+            }
             applyBoxTransform(box);
             playPushSound();
             if (box.onTarget && !wasOnTarget) playLightSound();
@@ -1315,6 +1621,14 @@ function createSokobanGame({ root, onBack }) {
     }
 
     function allTargetsLit() {
+        if (gameMode === "match") {
+            // 配对模式：每个非干扰箱必须在正确匹配的目标上
+            const realBoxes = boxes.filter(b => b.pairId !== -1);
+            return realBoxes.length > 0 && realBoxes.every(b => {
+                const mt = matchTargets.find(t => t.pairId === b.pairId);
+                return mt && b.y === mt.y && b.x === mt.x;
+            });
+        }
         return boxes.length > 0 && boxes.every(b => b.onTarget);
     }
 
@@ -1444,7 +1758,12 @@ function createSokobanGame({ root, onBack }) {
         stopEnemyLoop();
         playWinSound();
 
-        if (window.speakHanzi) {
+        // 配对模式：朗读每个配对汉字
+        if (gameMode === "match" && window.speakHanzi) {
+            matchPairs.forEach(p => {
+                try { window.speakHanzi(p.hanzi); } catch (_) {}
+            });
+        } else if (window.speakHanzi) {
             try { window.speakHanzi(currentHanzi); } catch (_) {}
         }
 
@@ -1455,7 +1774,8 @@ function createSokobanGame({ root, onBack }) {
                 highest = newHighest;
                 saveHighest(highest);
             }
-            buildLevel();
+            if (gameMode === "match") buildLevelMatch();
+            else buildLevel();
         });
     }
 
@@ -1464,25 +1784,44 @@ function createSokobanGame({ root, onBack }) {
         if (!wrapper) return;
         const overlay = document.createElement("div");
         overlay.className = "sokoban-win-overlay";
-        const pinyin = (window.PINYIN_MAP && window.PINYIN_MAP[currentHanzi]) || "";
-        overlay.innerHTML = `
-            <div class="sokoban-win-card">
-                <div class="sokoban-win-mask" id="sokobanWinMask"></div>
-                <div class="sokoban-win-hanzi">${currentHanzi}</div>
-                <div class="sokoban-win-pinyin">${pinyin}</div>
-                <div class="sokoban-win-label">★ 第 ${String(level).padStart(2, "0")} 关 通关 ★</div>
-            </div>
-        `;
+
+        if (gameMode === "match") {
+            // 配对模式：展示配对结果
+            const pairsHtml = matchPairs.map(p => {
+                const dirLabel = p.dir === "hp" ? `${p.hanzi}→${p.pinyin}` : `${p.pinyin}→${p.hanzi}`;
+                return `<span class="sokoban-win-pair">${dirLabel}</span>`;
+            }).join(" ");
+            overlay.innerHTML = `
+                <div class="sokoban-win-card">
+                    <div class="sokoban-win-hanzi">✓</div>
+                    <div class="sokoban-win-pairs">${pairsHtml}</div>
+                    <div class="sokoban-win-label">★ 第 ${String(level).padStart(2, "0")} 关 通关 ★</div>
+                </div>
+            `;
+        } else {
+            const pinyin = (window.PINYIN_MAP && window.PINYIN_MAP[currentHanzi]) || "";
+            overlay.innerHTML = `
+                <div class="sokoban-win-card">
+                    <div class="sokoban-win-mask" id="sokobanWinMask"></div>
+                    <div class="sokoban-win-hanzi">${currentHanzi}</div>
+                    <div class="sokoban-win-pinyin">${pinyin}</div>
+                    <div class="sokoban-win-label">★ 第 ${String(level).padStart(2, "0")} 关 通关 ★</div>
+                </div>
+            `;
+        }
+
         wrapper.appendChild(overlay);
 
-        // 用 mask 渲染像素拼字（作为放大版"过关纪念"）
-        const maskEl = overlay.querySelector("#sokobanWinMask");
-        for (let r = 0; r < MASK_SIZE; r++) {
-            for (let c = 0; c < MASK_SIZE; c++) {
-                const cell = document.createElement("div");
-                cell.className = "win-mask-cell" + (mask[r][c] ? " lit" : "");
-                cell.style.animationDelay = ((r + c) * 60) + "ms";
-                maskEl.appendChild(cell);
+        if (gameMode !== "match") {
+            // 用 mask 渲染像素拼字（作为放大版"过关纪念"）
+            const maskEl = overlay.querySelector("#sokobanWinMask");
+            for (let r = 0; r < MASK_SIZE; r++) {
+                for (let c = 0; c < MASK_SIZE; c++) {
+                    const cell = document.createElement("div");
+                    cell.className = "win-mask-cell" + (mask[r][c] ? " lit" : "");
+                    cell.style.animationDelay = ((r + c) * 60) + "ms";
+                    maskEl.appendChild(cell);
+                }
             }
         }
 

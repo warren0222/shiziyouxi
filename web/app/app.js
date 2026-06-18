@@ -30,6 +30,13 @@ const games = [
         description: "推箱子点亮汉字笔画，避开巡逻敌！像素街机风。",
         create: createSokobanGame,
     },
+    {
+        id: "duck",
+        icon: "🦆",
+        title: "鳄口求生",
+        description: "打鸭子喂鳄鱼，学汉字组词！打错鳄鱼会咬人哦~",
+        create: createDuckGame,
+    },
 ];
 
 function stopCurrentGame() {

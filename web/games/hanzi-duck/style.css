@@ -1,0 +1,521 @@
+/* ========== 鳄口求生 — 全局 ========== */
+.duck-wrapper {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    background: linear-gradient(180deg, #87ceeb 0%, #b0e0f6 40%, #d4f0fc 70%, #8bc34a 70%, #689f38 100%);
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+.duck-wrapper.shake {
+    animation: duckShake 0.4s ease;
+}
+@keyframes duckShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+}
+
+/* ========== 开始画面 ========== */
+.duck-start {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 16px;
+    padding: 24px;
+}
+.duck-title {
+    font-size: clamp(28px, 7vw, 48px);
+    font-weight: bold;
+    color: #ff6f00;
+    text-shadow: 2px 2px 0 #4e2700, 0 0 20px rgba(255,111,0,0.5);
+    letter-spacing: 4px;
+}
+.duck-subtitle {
+    font-size: clamp(14px, 3.5vw, 20px);
+    color: #5d4037;
+    letter-spacing: 2px;
+}
+.duck-story {
+    font-size: clamp(13px, 3vw, 16px);
+    color: #4e342e;
+    text-align: center;
+    line-height: 1.8;
+    max-width: 360px;
+    background: rgba(255,255,255,0.6);
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(141,110,99,0.3);
+}
+.duck-btn {
+    padding: 12px 36px;
+    font-size: clamp(14px, 3.5vw, 18px);
+    font-weight: bold;
+    color: #fff;
+    background: linear-gradient(180deg, #ff8f00, #e65100);
+    border: 2px solid #bf360c;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    transition: transform 0.1s;
+}
+.duck-btn:hover { transform: scale(1.05); }
+.duck-btn:active { transform: scale(0.97); }
+.duck-btn.secondary {
+    background: linear-gradient(180deg, #78909c, #546e7a);
+    border-color: #37474f;
+}
+.duck-btn.small {
+    padding: 6px 16px;
+    font-size: clamp(11px, 2.5vw, 14px);
+}
+
+/* ========== 游戏画面 ========== */
+.duck-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.25);
+    color: #fff;
+    z-index: 10;
+    gap: 8px;
+}
+.duck-target-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.duck-stats { min-width: 0; }
+.duck-target-hint {
+    font-size: clamp(10px, 2.2vw, 12px);
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 1px;
+}
+.target-label-text {
+    font-size: clamp(22px, 6vw, 36px);
+    font-weight: bold;
+    line-height: 1.1;
+}
+.target-label-text.hanzi {
+    color: #fff;
+    text-shadow: 0 0 8px rgba(255,255,255,0.5);
+}
+.target-label-text.pinyin {
+    color: #ffeb3b;
+    font-family: "Microsoft YaHei", monospace;
+    text-shadow: 0 0 8px rgba(255,235,59,0.5);
+}
+.duck-stats {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+.duck-stat {
+    font-size: clamp(11px, 2.5vw, 14px);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.heart {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+}
+.heart.alive::before { content: "❤️"; font-size: 14px; }
+.heart.dead::before { content: "🖤"; font-size: 14px; }
+
+/* ========== 天空舞台 ========== */
+.duck-stage {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: crosshair;
+    touch-action: manipulation;
+}
+
+/* 云朵 */
+.duck-clouds .cloud {
+    position: absolute;
+    background: rgba(255,255,255,0.7);
+    border-radius: 50%;
+    z-index: 0;
+}
+.cloud.c1 { width: 120px; height: 50px; top: 8%; left: 10%; animation: cloudDrift 25s linear infinite; }
+.cloud.c2 { width: 80px; height: 35px; top: 15%; left: 50%; animation: cloudDrift 30s linear infinite reverse; }
+.cloud.c3 { width: 100px; height: 40px; top: 5%; left: 75%; animation: cloudDrift 20s linear infinite; }
+@keyframes cloudDrift {
+    from { transform: translateX(0); }
+    to { transform: translateX(-120vw); }
+}
+
+/* ========== 鸭子 ========== */
+.duck {
+    position: absolute;
+    z-index: 5;
+    cursor: pointer;
+    transition: none;
+    -webkit-tap-highlight-color: transparent;
+    animation: duckBob 1.6s ease-in-out infinite;
+}
+@keyframes duckBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+/* 翻转只作用于鸭身（含头/嘴/眼/翅/尾），标签牌保持正立 */
+.duck.flip .duck-body { transform: scaleX(-1); }
+
+.duck-body {
+    width: 70px;
+    height: 42px;
+    background: #fdd835;
+    border-radius: 50% 50% 50% 30%;
+    position: relative;
+    border: 2px solid #f9a825;
+    margin-top: 10px;
+}
+.duck-body::before {
+    /* 鸭头 */
+    content: "";
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: #fdd835;
+    border-radius: 50%;
+    top: -19px;
+    left: 3px;
+    border: 2px solid #f9a825;
+}
+.duck-body::after {
+    /* 鸭嘴（朝左；翻转时随鸭身一起镜像） */
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 8px;
+    background: #ff8f00;
+    border-radius: 0 50% 50% 0;
+    top: -8px;
+    left: -12px;
+    border: 1px solid #e65100;
+}
+
+/* 翅膀（拍打） */
+.duck-wing {
+    position: absolute;
+    width: 28px;
+    height: 18px;
+    background: #fbc02d;
+    border-radius: 50%;
+    top: 25px;
+    left: 28px;
+    border: 1px solid #f9a825;
+    animation: wingFlap 0.3s ease-in-out infinite alternate;
+    transform-origin: left center;
+    z-index: 1;
+}
+@keyframes wingFlap {
+    from { transform: rotate(-15deg); }
+    to { transform: rotate(25deg); }
+}
+
+/* 眼睛（眨眼） */
+.duck-eye {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    background: #fff;
+    border: 1px solid #5d4037;
+    border-radius: 50%;
+    top: -13px;
+    left: 20px;
+    z-index: 3;
+    overflow: hidden;
+    animation: blink 4s infinite;
+}
+.duck-pupil {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #1b1b1b;
+    border-radius: 50%;
+    top: 2px;
+    left: 3px;
+}
+@keyframes blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    95% { transform: scaleY(0.1); }
+}
+
+/* 尾巴（摆动） */
+.duck-tail {
+    position: absolute;
+    width: 14px;
+    height: 10px;
+    background: #f9a825;
+    right: -6px;
+    top: 4px;
+    border-radius: 60% 30% 30% 60%;
+    border: 1px solid #f9a825;
+    transform-origin: left center;
+    animation: tailWag 0.7s ease-in-out infinite alternate;
+}
+@keyframes tailWag {
+    from { transform: rotate(-12deg); }
+    to { transform: rotate(16deg); }
+}
+
+/* 标签牌 —— 对错同色，玩家必须读字辨别 */
+.duck-tag {
+    position: absolute;
+    top: -12px;
+    right: -16px;
+    min-width: 38px;
+    height: 34px;
+    background: #fffdf5;
+    border: 2px solid #6d4c41;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 600;
+    color: #3e2723;
+    padding: 0 5px;
+    z-index: 2;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+}
+
+/* 鸭子逃跑：受惊一缩，随即向上飞走淡出 */
+.duck.escaping {
+    animation: duckEscape 0.55s ease-out forwards;
+    pointer-events: none;
+}
+@keyframes duckEscape {
+    0%   { opacity: 1; transform: scale(1) translateY(0) rotate(0); }
+    20%  { opacity: 1; transform: scale(0.85) translateY(4px) rotate(-8deg); }
+    45%  { opacity: 1; transform: scale(1.15) translateY(-14px) rotate(6deg); }
+    100% { opacity: 0; transform: scale(0.45) translateY(-90px) rotate(18deg); }
+}
+
+/* ========== 弹珠 ========== */
+.bullet {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #795548;
+    border-radius: 50%;
+    z-index: 20;
+    pointer-events: none;
+    box-shadow: 0 0 4px rgba(121,85,72,0.5);
+}
+
+/* ========== 底部区域 ========== */
+.duck-footer {
+    padding: 10px 18px;
+    background: linear-gradient(180deg, #689f38, #33691e);
+    min-height: 125px;
+    flex: 0 0 125px;
+    position: relative;
+    z-index: 8;
+    overflow: visible;
+}
+
+/* 小男孩居中，鳄鱼在左侧（鳄鱼嘴朝右够向小男孩） */
+.duck-kid {
+    position: absolute;
+    left: 50%;
+    bottom: 4px;
+    transform: translateX(-50%);
+    z-index: 2;
+}
+.duck-croc {
+    position: absolute;
+    left: 14%;
+    bottom: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    z-index: 3;
+    /* transform 由 JS 冲刺控制，不放动画，避免覆盖 inline translateX */
+}
+@keyframes crocIdle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+}
+.duck-croc.eating .croc-svg {
+    animation: crocEat 0.6s ease;
+}
+@keyframes crocEat {
+    0% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-12px) scale(1.1); }
+    60% { transform: translateY(-4px) scale(1.05); }
+    100% { transform: translateY(0) scale(1); }
+}
+
+.croc-svg {
+    display: block;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,0.25));
+    animation: crocIdle 3s ease-in-out infinite;
+}
+/* 上下颚都绕嘴根 (120, 58) 张合 */
+.croc-jaw-top {
+    transform-origin: 120px 58px;
+    transition: transform 0.15s ease;
+    transform-box: fill-box;
+}
+.croc-jaw-bottom {
+    transform-origin: 120px 58px;
+    transition: transform 0.15s ease;
+    transform-box: fill-box;
+}
+.duck-croc.eating .croc-jaw-top   { transform: rotate(-12deg); }
+.duck-croc.eating .croc-jaw-bottom{ transform: rotate(12deg); }
+.duck-croc.biting .croc-jaw-top   { transform: rotate(-18deg); }
+.duck-croc.biting .croc-jaw-bottom{ transform: rotate(18deg); }
+/* 尾巴轻摆 */
+.croc-tail {
+    transform-origin: 34px 52px;
+    transform-box: fill-box;
+    animation: crocTailWag 2.4s ease-in-out infinite alternate;
+}
+@keyframes crocTailWag {
+    from { transform: rotate(-4deg); }
+    to   { transform: rotate(5deg); }
+}
+
+.croc-hunger {
+    width: 120px;
+    height: 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.croc-hunger-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #ff9800, #ffeb3b);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+.croc-hunger-text {
+    font-size: 11px;
+    color: rgba(255,255,255,0.8);
+    text-align: center;
+}
+
+/* ========== 小孩（SVG） ========== */
+.kid-svg {
+    display: block;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,0.25));
+}
+/* 呼吸/待机：作用在 inner，不影响 .duck-kid 的居中 transform */
+.kid-inner {
+    animation: kidBreathe 2.2s ease-in-out infinite;
+    transform-origin: bottom center;
+}
+@keyframes kidBreathe {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-2px) scale(1.02); }
+}
+/* 发射：先蓄力后仰，再前倾释放 */
+.duck-kid.shooting .kid-inner {
+    animation: kidShoot 0.34s ease;
+}
+@keyframes kidShoot {
+    0%   { transform: translateY(0) scale(1) rotate(0); }
+    30%  { transform: translate(2px, 0) scale(1.03) rotate(4deg); }   /* 蓄力后仰 */
+    55%  { transform: translate(-4px, 1px) scale(1.05) rotate(-6deg); } /* 前倾释放 */
+    100% { transform: translateY(0) scale(1) rotate(0); }
+}
+/* 弹弓手臂：后拉 → 释放前推 */
+.kid-arm {
+    transform-box: fill-box;
+    transform-origin: 8% 96%;   /* 约肩部 */
+    transition: transform 0.12s ease;
+}
+.duck-kid.shooting .kid-arm {
+    animation: armShoot 0.34s ease;
+}
+@keyframes armShoot {
+    0%   { transform: rotate(0); }
+    30%  { transform: rotate(-18deg) translateX(-2px); }  /* 拉弓：手臂后拉 */
+    55%  { transform: rotate(22deg) translateX(3px); }    /* 释放：前推 */
+    100% { transform: rotate(0); }
+}
+/* 弹珠兜：拉到脸侧蓄力，再弹出 */
+.duck-kid.shooting .sling-pouch {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: pouchPull 0.34s ease;
+}
+@keyframes pouchPull {
+    0%   { transform: translate(0, 0); }
+    30%  { transform: translate(-3px, 3px) scale(1.2); }  /* 蓄力拉伸 */
+    55%  { transform: translate(3px, -1px) scale(0.7); }  /* 弹出 */
+    100% { transform: translate(0, 0); }
+}
+
+/* ========== 结果画面 ========== */
+.duck-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 16px;
+    padding: 24px;
+}
+.duck-result.win { background: linear-gradient(180deg, #81c784, #4caf50); }
+.duck-result.lose { background: linear-gradient(180deg, #e57373, #c62828); }
+.result-title {
+    font-size: clamp(28px, 7vw, 42px);
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+.result-info {
+    font-size: clamp(14px, 3.5vw, 18px);
+    color: rgba(255,255,255,0.9);
+}
+.result-level {
+    font-size: clamp(16px, 4vw, 22px);
+    color: #fff;
+    font-weight: bold;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 560px) {
+    .duck-header { padding: 5px 8px; gap: 6px; }
+    .duck-btn.small { padding: 5px 10px; }
+    .duck-stats { gap: 8px; }
+    .duck-footer { min-height: 108px; flex: 0 0 108px; padding: 8px 12px; }
+    .croc-svg { width: 104px; height: 60px; }
+    .croc-hunger { width: 104px; }
+    .kid-svg { width: 48px; height: 78px; }
+    .duck-croc { left: 10%; }
+    .duck-tag { font-size: 17px; min-width: 32px; height: 28px; top: -10px; right: -12px; }
+}
+@media (max-width: 360px) {
+    .duck-title { letter-spacing: 2px; }
+    .duck-footer { min-height: 96px; flex: 0 0 96px; padding: 6px 8px; }
+    .croc-svg { width: 92px; height: 53px; }
+    .croc-hunger { width: 92px; }
+    .duck-tag { font-size: 15px; min-width: 28px; height: 24px; }
+}

@@ -440,9 +440,16 @@
         inset 0 2px 0 rgba(255, 220, 130, 0.5),
         inset 0 -2px 0 rgba(0, 0, 0, 0.5),
         0 2px 4px rgba(0, 0, 0, 0.4);
-    margin: 4px;                     /* 比格子明显小一圈 */
-    width: calc(var(--cell) - 8px);
-    height: calc(var(--cell) - 8px);
+    margin: 2px;
+    width: calc(var(--cell) - 4px);
+    height: calc(var(--cell) - 4px);
+}
+
+/* 配对模式箱子更大 */
+.sokoban-box.has-label {
+    margin: 1px;
+    width: calc(var(--cell) - 2px);
+    height: calc(var(--cell) - 2px);
 }
 
 .sokoban-box::before {
@@ -868,4 +875,150 @@
     .sokoban-target-pinyin {
         font-size: 12px;
     }
+}
+
+/* ========== 配对模式样式 ========== */
+
+/* 起始页模式选择按钮 */
+.sokoban-pixel-btn.mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+    max-width: 260px;
+    padding: 12px 16px;
+}
+
+.sokoban-pixel-btn.mode small {
+    font-size: clamp(9px, 2vw, 11px);
+    color: rgba(51, 255, 51, 0.7);
+    letter-spacing: 1px;
+}
+
+/* 配对模式：箱子标签 */
+.sokoban-box .box-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    font-weight: bold;
+    line-height: 1.2;
+    text-align: center;
+    pointer-events: none;
+}
+
+/* 汉字箱 (dir-hp: 箱=汉字 → 目标=拼音) */
+.sokoban-box.dir-hp .box-label {
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    color: #fff;
+    font-weight: 400;
+}
+
+/* 拼音箱 (dir-ph: 箱=拼音 → 目标=汉字) — 冷色蓝紫风格 */
+.sokoban-box.dir-ph {
+    background: linear-gradient(180deg, #5c6bc0 0%, #3949ab 50%, #1a237e 100%);
+    border-color: #0d1452;
+    box-shadow:
+        inset 0 2px 0 rgba(200, 200, 255, 0.4),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+        0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.sokoban-box.dir-ph .box-label {
+    font-family: "Microsoft YaHei", "PingFang SC", monospace;
+    color: #e8eaf6;
+}
+
+/* 配对模式有标签的箱子隐藏 X 纹路 */
+.sokoban-box.has-label::before {
+    display: none;
+}
+
+/* 正确匹配发光 */
+.sokoban-box.correct-match {
+    box-shadow:
+        0 0 16px rgba(51, 255, 51, 0.9),
+        inset 0 0 8px rgba(51, 255, 51, 0.4);
+    animation: sokobanBoxLit 0.4s ease-out;
+}
+
+/* 干扰箱：虚线边框 + 半透明，与正常箱区分 */
+.sokoban-box.distractor {
+    opacity: 0.55;
+    border-style: dashed;
+    border-width: 2px;
+    background: linear-gradient(180deg, #666 0%, #444 50%, #222 100%);
+    border-color: #888;
+    box-shadow: none;
+}
+.sokoban-box.distractor .box-label {
+    opacity: 0.7;
+}
+
+/* 配对模式：目标格标签 */
+.sokoban-cell.target .target-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    font-weight: bold;
+    line-height: 1.2;
+    text-align: center;
+    pointer-events: none;
+}
+
+/* 拼音目标（对应汉字箱）— 蓝紫底 */
+.sokoban-cell.target.type-pinyin {
+    background: rgba(92, 107, 192, 0.15);
+    border-color: rgba(92, 107, 192, 0.6);
+}
+
+.sokoban-cell.target.type-pinyin .target-label {
+    font-family: "Microsoft YaHei", "PingFang SC", monospace;
+    color: #b0bec5;
+    font-size: calc(var(--cell) * 0.42);
+    font-weight: 400;
+}
+
+/* 汉字目标（对应拼音箱）— 暖黄底 */
+.sokoban-cell.target.type-hanzi {
+    background: rgba(255, 235, 59, 0.12);
+    border-color: rgba(255, 235, 59, 0.6);
+}
+
+.sokoban-cell.target.type-hanzi .target-label {
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    color: #fff;
+    font-size: calc(var(--cell) * 0.65);
+    font-weight: 400;
+}
+
+/* 配对目标格隐藏默认脉冲小点 */
+.sokoban-cell.target.type-pinyin::after,
+.sokoban-cell.target.type-hanzi::after {
+    display: none;
+}
+
+/* 过关配对展示 */
+.sokoban-win-pairs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin: 8px 0 12px;
+}
+
+.sokoban-win-pair {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(51, 255, 51, 0.1);
+    border: 1px solid rgba(51, 255, 51, 0.4);
+    color: #33ff33;
+    font-size: clamp(13px, 3vw, 16px);
+    letter-spacing: 1px;
 }
