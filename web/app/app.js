@@ -37,6 +37,13 @@ const games = [
         description: "打鸭子喂鳄鱼，学汉字组词！打错鳄鱼会咬人哦~",
         create: createDuckGame,
     },
+    {
+        id: "sentence",
+        icon: "🛸",
+        title: "造句大作战",
+        description: "瞄准飞碟，按顺序击落它们身上的词组，连词成句！",
+        create: createSentenceGame,
+    },
 ];
 
 function stopCurrentGame() {

@@ -1,0 +1,700 @@
+/* ========== 造句大作战 — 容器 & 太空背景 ========== */
+
+.sentence-wrapper {
+    width: 100%;
+    height: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: linear-gradient(180deg, #050818 0%, #0a0e2a 50%, #1a1230 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: #e0e0e0;
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "STHeiti", sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sentence-bg-stars {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.sentence-star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+@keyframes sentenceTwinkle {
+    0%, 100% { opacity: 0.2; }
+    50%      { opacity: 0.85; }
+}
+
+/* ========== 顶部头部 ========== */
+
+.sentence-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(5, 8, 24, 0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 10;
+    border-bottom: 1px solid rgba(120, 200, 255, 0.18);
+}
+
+.sentence-header h1 {
+    font-size: clamp(14px, 3.8vw, 20px);
+    color: #82e1ff;
+    margin: 0;
+    text-shadow: 0 0 8px rgba(130, 225, 255, 0.35);
+}
+
+.sentence-header .btn-back {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #82e1ff;
+    font-size: clamp(12px, 3vw, 14px);
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.sentence-header .btn-back:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.sentence-level-hp {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: clamp(12px, 3vw, 15px);
+    color: #ffd740;
+}
+
+.sentence-hp {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    font-size: clamp(13px, 3.2vw, 16px);
+    line-height: 1;
+}
+
+.sentence-heart {
+    transition: transform 0.2s;
+    filter: drop-shadow(0 0 4px rgba(239, 83, 80, 0.5));
+}
+
+.sentence-heart.empty {
+    opacity: 0.35;
+    filter: none;
+}
+
+.sentence-heart.full {
+    color: #ef5350;
+}
+
+/* ========== 已建句子条 ========== */
+
+.sentence-built {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 8px 8px 8px;
+    background: linear-gradient(90deg, rgba(130, 225, 255, 0.08), rgba(130, 225, 255, 0.18), rgba(130, 225, 255, 0.08));
+    border-bottom: 1px dashed rgba(130, 225, 255, 0.4);
+    z-index: 10;
+    min-height: 44px;
+}
+
+.sentence-slot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: clamp(28px, 8vw, 40px);
+    height: clamp(26px, 6.5vw, 32px);
+    padding: 0 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1.5px dashed rgba(130, 225, 255, 0.4);
+    color: rgba(130, 225, 255, 0.5);
+    font-size: clamp(13px, 3.2vw, 16px);
+    font-weight: bold;
+}
+
+.sentence-slot.locked {
+    background: rgba(105, 240, 174, 0.15);
+    border: 2px solid rgba(105, 240, 174, 0.7);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(105, 240, 174, 0.45);
+    animation: sentenceLockPop 0.5s ease-out;
+}
+
+@keyframes sentenceLockPop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    60%  { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ========== 游戏舞台 ========== */
+
+.sentence-arena {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #0a0e2a 0%, #1a1230 50%, #2a1f3d 100%);
+    cursor: crosshair;
+    z-index: 5;
+    touch-action: none;
+}
+
+.sentence-arena.shake {
+    animation: sentenceShake 0.4s ease-in-out;
+}
+
+@keyframes sentenceShake {
+    0%, 100% { transform: translateX(0); }
+    20%  { transform: translateX(-6px); }
+    40%  { transform: translateX(6px); }
+    60%  { transform: translateX(-4px); }
+    80%  { transform: translateX(4px); }
+}
+
+/* ========== 飞碟 ========== */
+
+.sentence-ufo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: clamp(60px, 16vw, 92px);
+    height: clamp(34px, 8.5vw, 50px);
+    z-index: 6;
+    pointer-events: none;
+    will-change: transform;
+    transition: filter 0.15s;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55));
+}
+
+.sentence-ufo-body {
+    position: absolute;
+    inset: 35% 0 0 0;
+    border-radius: 50%;
+    background:
+        radial-gradient(ellipse at 30% 25%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 35%),
+        linear-gradient(180deg, #b0bec5 0%, #607d8b 50%, #37474f 100%);
+    box-shadow:
+        inset 0 -4px 8px rgba(0, 0, 0, 0.4),
+        0 0 8px rgba(130, 225, 255, 0.4);
+    border: 1px solid rgba(180, 220, 255, 0.4);
+}
+
+.sentence-ufo-dome {
+    position: absolute;
+    left: 28%;
+    right: 28%;
+    top: 0;
+    height: 55%;
+    border-radius: 50% 50% 30% 30% / 80% 80% 20% 20%;
+    background:
+        radial-gradient(ellipse at 30% 30%, rgba(180, 240, 255, 0.9) 0%, rgba(40, 180, 220, 0.7) 50%, rgba(20, 80, 120, 0.85) 100%);
+    box-shadow:
+        inset 0 2px 4px rgba(255, 255, 255, 0.6),
+        0 0 12px rgba(130, 225, 255, 0.5);
+    border: 1px solid rgba(180, 240, 255, 0.5);
+}
+
+.sentence-ufo-lights {
+    position: absolute;
+    bottom: 10%;
+    left: 15%;
+    right: 15%;
+    height: 4px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.sentence-ufo-lights span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #ffeb3b;
+    box-shadow: 0 0 6px rgba(255, 235, 59, 0.9);
+    animation: sentenceUfoBlink 1.2s ease-in-out infinite;
+}
+.sentence-ufo-lights span:nth-child(2) { animation-delay: 0.2s; background: #ff5252; box-shadow: 0 0 6px rgba(255, 82, 82, 0.9); }
+.sentence-ufo-lights span:nth-child(3) { animation-delay: 0.4s; background: #69f0ae; box-shadow: 0 0 6px rgba(105, 240, 174, 0.9); }
+.sentence-ufo-lights span:nth-child(4) { animation-delay: 0.6s; background: #40c4ff; box-shadow: 0 0 6px rgba(64, 196, 255, 0.9); }
+
+@keyframes sentenceUfoBlink {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+}
+
+.sentence-ufo-text {
+    position: absolute;
+    top: 28%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #fff;
+    font-weight: bold;
+    font-size: clamp(11px, 2.8vw, 14px);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), 0 0 6px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    z-index: 2;
+    padding: 0 4px;
+    line-height: 1;
+    word-break: keep-all;
+    white-space: nowrap;
+}
+
+.sentence-ufo.flash-wrong {
+    animation: sentenceUfoWrong 0.4s ease-in-out;
+}
+
+@keyframes sentenceUfoWrong {
+    0%, 100% { filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55)); }
+    50%      { filter: brightness(1.4) saturate(0.5) drop-shadow(0 0 14px #ff5252); }
+}
+
+.sentence-ufo.crashing {
+    animation: sentenceUfoCrash 0.5s ease-in forwards;
+    pointer-events: none;
+}
+
+@keyframes sentenceUfoCrash {
+    0%   { opacity: 1; transform: var(--crash-base) rotate(0deg); }
+    100% { opacity: 0; transform: var(--crash-base) translateY(120px) rotate(60deg) scale(0.6); }
+}
+
+/* ========== 坦克 ========== */
+
+.sentence-tank {
+    position: absolute;
+    bottom: 4%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: clamp(54px, 14vw, 76px);
+    height: clamp(34px, 9vw, 48px);
+    z-index: 8;
+    pointer-events: none;
+    transition: filter 0.15s;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55));
+}
+
+.sentence-tank-body {
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    bottom: 0;
+    height: 60%;
+    border-radius: 8px 8px 4px 4px;
+    background: linear-gradient(180deg, #6d8b54 0%, #4a6535 50%, #2f4220 100%);
+    border: 1px solid rgba(180, 200, 140, 0.4);
+    box-shadow:
+        inset 0 2px 4px rgba(255, 255, 255, 0.25),
+        inset 0 -3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.sentence-tank-treads {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 28%;
+    background:
+        repeating-linear-gradient(90deg, #1a1a1a 0px, #1a1a1a 4px, #3a3a3a 4px, #3a3a3a 8px),
+        linear-gradient(180deg, #2a2a2a, #0a0a0a);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sentence-tank-turret {
+    position: absolute;
+    left: 30%;
+    right: 30%;
+    bottom: 50%;
+    height: 35%;
+    border-radius: 50% 50% 20% 20% / 70% 70% 30% 30%;
+    background: linear-gradient(180deg, #7a9c5e 0%, #547040 100%);
+    border: 1px solid rgba(180, 200, 140, 0.4);
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+/* 炮管 — 由 JS 控制旋转 */
+.sentence-tank-barrel {
+    position: absolute;
+    left: 50%;
+    bottom: 56%;
+    width: clamp(8px, 2vw, 11px);
+    height: clamp(34px, 9vw, 46px);
+    margin-left: calc(clamp(8px, 2vw, 11px) / -2);
+    background: linear-gradient(180deg, #2a2a2a 0%, #4a4a4a 50%, #1a1a1a 100%);
+    border-radius: 4px 4px 2px 2px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+    transform-origin: 50% 100%;
+    transform: rotate(0rad);
+    z-index: 2;
+    will-change: transform;
+}
+
+.sentence-tank-barrel::after {
+    /* 炮口黑洞 */
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 4px;
+    background: #000;
+    border-radius: 50% 50% 0 0;
+}
+
+.sentence-tank.flash {
+    animation: sentenceTankFlash 0.6s ease-out;
+}
+
+@keyframes sentenceTankFlash {
+    0%   { filter: brightness(2.4) saturate(1.5) drop-shadow(0 0 14px #fff); }
+    40%  { filter: brightness(1.4) saturate(1.2) drop-shadow(0 0 8px #ef5350); }
+    100% { filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55)); }
+}
+
+/* ========== 子弹 / 导弹 ========== */
+
+.sentence-bullet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 8px;
+    height: 16px;
+    background: linear-gradient(180deg, #fff176, #ff8f00);
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(255, 215, 64, 0.8), 0 0 14px rgba(255, 143, 0, 0.5);
+    z-index: 7;
+    pointer-events: none;
+    will-change: transform;
+}
+
+.sentence-missile {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 10px;
+    height: 22px;
+    background: linear-gradient(180deg, #ff5252 0%, #b71c1c 100%);
+    border-radius: 50% 50% 30% 30% / 30% 30% 20% 20%;
+    box-shadow: 0 0 6px rgba(255, 82, 82, 0.7), 0 0 12px rgba(255, 23, 68, 0.5);
+    z-index: 7;
+    pointer-events: none;
+    will-change: transform;
+    transform-origin: center center;
+}
+
+.sentence-missile::after {
+    /* 尾焰 */
+    content: "";
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 10px;
+    background: linear-gradient(180deg, #ffeb3b, transparent);
+    border-radius: 50% 50% 30% 30%;
+    filter: blur(1px);
+    animation: sentenceMissileFlame 0.15s ease-in-out infinite alternate;
+}
+
+@keyframes sentenceMissileFlame {
+    0%   { transform: translateX(-50%) scaleY(0.8); }
+    100% { transform: translateX(-50%) scaleY(1.2); }
+}
+
+/* ========== 粒子 / 浮文字 / 升级提示 ========== */
+
+.sentence-particle {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 20;
+    animation: sentenceExplode 0.5s ease-out forwards;
+}
+
+@keyframes sentenceExplode {
+    0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); }
+}
+
+.sentence-float-text {
+    position: absolute;
+    pointer-events: none;
+    z-index: 20;
+    font-size: clamp(13px, 3.2vw, 18px);
+    font-weight: bold;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+    transform: translateX(-50%);
+    animation: sentenceFloatUp 0.9s ease-out forwards;
+}
+
+@keyframes sentenceFloatUp {
+    0%   { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -55px); }
+}
+
+.sentence-level-up {
+    position: absolute;
+    top: 38%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(22px, 6vw, 36px);
+    font-weight: bold;
+    color: #82e1ff;
+    text-shadow: 0 0 20px rgba(130, 225, 255, 0.6), 0 0 40px rgba(130, 225, 255, 0.3);
+    z-index: 25;
+    pointer-events: none;
+    text-align: center;
+    line-height: 1.3;
+    width: 88%;
+    animation: sentenceLevelUpAnim 1.4s ease-out forwards;
+}
+
+@keyframes sentenceLevelUpAnim {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+    80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ========== 起始 / 结束 ========== */
+
+.sentence-start, .sentence-gameover {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 8, 24, 0.92);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+}
+
+.sentence-start-card, .sentence-gameover-card {
+    background: linear-gradient(145deg, rgba(20, 30, 60, 0.97), rgba(30, 20, 50, 0.98));
+    border: 1px solid rgba(130, 225, 255, 0.35);
+    border-radius: 14px;
+    padding: clamp(20px, 5vw, 32px);
+    text-align: center;
+    max-width: 320px;
+    width: 88%;
+    box-shadow: 0 0 30px rgba(130, 225, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.sentence-start-card h2, .sentence-gameover-card h2 {
+    font-size: clamp(22px, 6vw, 30px);
+    color: #82e1ff;
+    margin: 0 0 4px;
+    text-shadow: 0 0 12px rgba(130, 225, 255, 0.4);
+}
+
+.sentence-gameover-card h2 {
+    color: #ff8a80;
+    text-shadow: 0 0 12px rgba(255, 82, 82, 0.4);
+}
+
+.sentence-subtitle {
+    color: #b0bec5;
+    font-size: clamp(12px, 3vw, 14px);
+    margin: 0;
+}
+
+.sentence-rules {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0 6px;
+    color: #cfd8dc;
+    font-size: clamp(11px, 2.6vw, 13px);
+    line-height: 1.7;
+    text-align: left;
+    width: 100%;
+}
+
+.sentence-highscore-display {
+    color: #ffab40;
+    font-size: clamp(13px, 3vw, 15px);
+    margin: 0;
+}
+
+.sentence-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    width: 100%;
+    font-size: clamp(13px, 3.2vw, 15px);
+    border-bottom: 1px solid rgba(130, 225, 255, 0.12);
+}
+
+.sentence-result-row:last-of-type {
+    border-bottom: none;
+}
+
+.sentence-result-label {
+    color: #90a4ae;
+}
+
+.sentence-result-value {
+    color: #fff;
+    font-weight: bold;
+}
+
+.sentence-result-value.new-record {
+    color: #ffd740;
+    text-shadow: 0 0 8px rgba(255, 215, 64, 0.5);
+}
+
+.sentence-record-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #ffd740, #ffab40);
+    color: #1a1f3d;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-left: 4px;
+}
+
+.sentence-btn {
+    padding: 11px 20px;
+    font-size: clamp(14px, 3.5vw, 16px);
+    border-radius: 10px;
+    border: 2px solid rgba(130, 225, 255, 0.4);
+    background: rgba(20, 60, 100, 0.5);
+    color: #82e1ff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    font-weight: bold;
+    width: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sentence-btn:hover {
+    background: rgba(130, 225, 255, 0.18);
+    border-color: rgba(130, 225, 255, 0.7);
+    box-shadow: 0 0 16px rgba(130, 225, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.sentence-btn:active {
+    transform: translateY(0);
+}
+
+.sentence-btn-primary {
+    background: linear-gradient(135deg, #29b6f6, #0277bd);
+    color: #fff;
+    border-color: rgba(130, 225, 255, 0.7);
+}
+
+.sentence-btn-primary:hover {
+    background: linear-gradient(135deg, #4fc3f7, #0288d1);
+    color: #fff;
+}
+
+.sentence-btn-back {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #cfd8dc;
+    font-weight: normal;
+}
+
+.sentence-btn-back:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+/* 对战模式按钮: 红橙渐变, 与闯关蓝色区分开 */
+.sentence-btn-battle {
+    background: linear-gradient(135deg, #ff7043, #c62828);
+    color: #fff;
+    border-color: rgba(255, 138, 101, 0.7);
+}
+
+.sentence-btn-battle:hover {
+    background: linear-gradient(135deg, #ff8a65, #d84315);
+    color: #fff;
+}
+
+.sentence-btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    margin-top: 6px;
+}
+
+/* ========== 对战模式: 屏幕底部移动按钮 ========== */
+
+.sentence-battle-controls {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 12px;
+    padding: 0 16px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 9;
+}
+
+.sentence-move-btn {
+    pointer-events: auto;
+    width: clamp(48px, 13vw, 60px);
+    height: clamp(48px, 13vw, 60px);
+    border-radius: 50%;
+    background: rgba(82, 225, 255, 0.18);
+    border: 2px solid rgba(130, 225, 255, 0.55);
+    color: #82e1ff;
+    font-size: clamp(20px, 5vw, 26px);
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: background 0.1s, transform 0.1s, border-color 0.1s;
+    touch-action: none;
+}
+
+.sentence-move-btn:hover {
+    background: rgba(82, 225, 255, 0.3);
+    border-color: rgba(130, 225, 255, 0.8);
+}
+
+.sentence-move-btn:active {
+    background: rgba(82, 225, 255, 0.5);
+    transform: scale(0.92);
+}
