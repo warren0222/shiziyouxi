@@ -44,6 +44,13 @@ const games = [
         description: "瞄准飞碟，按顺序击落它们身上的词组，连词成句！",
         create: createSentenceGame,
     },
+    {
+        id: "snake",
+        icon: "🐲",
+        title: "汉字贪吃龙",
+        description: "操控小龙吃字，练识字和组词。龙头上有提示，吃错会缩短哦！",
+        create: createSnakeGame,
+    },
 ];
 
 function stopCurrentGame() {

@@ -1,0 +1,404 @@
+/* 汉字贪吃蛇 样式 */
+
+/* ==================== 开始页 ==================== */
+.snake-start {
+    width: min(720px, 100%);
+    max-height: 100%;
+    overflow-y: auto;
+    padding: clamp(16px, 3vmin, 28px);
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 20px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+    text-align: center;
+}
+
+.snake-start h1 {
+    margin-bottom: clamp(6px, 1.5vmin, 12px);
+}
+
+.snake-tagline {
+    color: #666;
+    font-size: clamp(13px, 2vmin, 16px);
+    margin-bottom: clamp(14px, 3vmin, 24px);
+}
+
+.snake-mode-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: clamp(10px, 2vmin, 16px);
+    margin-bottom: clamp(14px, 2.5vmin, 22px);
+}
+
+@media (max-width: 480px) {
+    .snake-mode-cards { grid-template-columns: 1fr; }
+}
+
+.snake-mode-card {
+    background: linear-gradient(160deg, #d6f5e1 0%, #a7e9c8 100%);
+    border: 3px solid #4caf50;
+    border-radius: 18px;
+    padding: clamp(14px, 2.6vmin, 22px) clamp(10px, 2vmin, 16px);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: #1f3d2a;
+    font-family: inherit;
+}
+.snake-mode-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 22px rgba(76, 175, 80, 0.35);
+}
+.snake-mode-card[data-mode="word"] {
+    background: linear-gradient(160deg, #ffe7b8 0%, #ffc77c 100%);
+    border-color: #ff9800;
+    color: #4a2c00;
+}
+.snake-mode-card[data-mode="word"]:hover {
+    box-shadow: 0 10px 22px rgba(255, 152, 0, 0.35);
+}
+
+.snake-mode-emoji {
+    font-size: clamp(30px, 6vmin, 48px);
+    margin-bottom: 4px;
+}
+.snake-mode-card h2 {
+    font-size: clamp(16px, 3vmin, 22px);
+    margin-bottom: 4px;
+}
+.snake-mode-card p {
+    font-size: clamp(12px, 1.9vmin, 14px);
+    margin-bottom: 6px;
+    opacity: 0.85;
+}
+.snake-mode-eg {
+    font-size: clamp(12px, 1.9vmin, 14px);
+    background: rgba(255, 255, 255, 0.55);
+    border-radius: 8px;
+    padding: 4px 8px;
+    display: inline-block;
+}
+.snake-mode-eg b { color: #c62828; }
+
+.snake-rules {
+    background: #f3f6fb;
+    border-radius: 12px;
+    padding: clamp(8px, 1.6vmin, 14px) clamp(10px, 2vmin, 16px);
+    color: #455;
+    font-size: clamp(12px, 1.9vmin, 14px);
+    line-height: 1.7;
+    margin-bottom: clamp(10px, 2vmin, 16px);
+}
+
+.snake-best {
+    color: #d77b00;
+    font-size: clamp(14px, 2.3vmin, 18px);
+    margin-bottom: clamp(10px, 2vmin, 16px);
+}
+.snake-best b { font-size: 1.15em; }
+
+.snake-back-btn { margin-top: 4px; }
+
+/* ==================== 游戏页 ==================== */
+.snake-stage {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px, 1.2vmin, 12px);
+    align-items: stretch;
+    padding: clamp(4px, 1vmin, 10px);
+}
+
+.snake-hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.94);
+    border-radius: 14px;
+    padding: clamp(6px, 1.4vmin, 12px) clamp(10px, 2vmin, 16px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.snake-hud-mode {
+    font-size: clamp(11px, 1.8vmin, 13px);
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.snake-hud-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.snake-hud-label {
+    font-size: clamp(12px, 1.9vmin, 14px);
+    color: #555;
+}
+.snake-target-main {
+    font-size: clamp(22px, 5vmin, 38px);
+    font-weight: bold;
+    color: #2e7d32;
+    line-height: 1;
+}
+.snake-target-main.is-pinyin {
+    color: #1565c0;
+    font-style: italic;
+    font-family: "Georgia", "Times New Roman", serif;
+}
+.snake-target-sub {
+    font-size: clamp(12px, 1.9vmin, 14px);
+    color: #888;
+}
+
+.snake-hud-stats {
+    display: flex;
+    gap: clamp(8px, 1.6vmin, 14px);
+}
+.snake-stat {
+    background: #f3f6fb;
+    border-radius: 10px;
+    padding: 4px 10px;
+    text-align: center;
+    min-width: 56px;
+}
+.snake-stat span {
+    display: block;
+    font-size: clamp(10px, 1.5vmin, 11px);
+    color: #788;
+}
+.snake-stat b {
+    display: block;
+    font-size: clamp(14px, 2.4vmin, 18px);
+    color: #234;
+}
+
+/* ==================== 棋盘 ==================== */
+.snake-board-wrap {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.snake-grid {
+    --cell: 32px;
+    width: calc(var(--cell) * var(--cols));
+    height: calc(var(--cell) * var(--rows));
+    position: relative;
+    background:
+        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px) 0 0 / var(--cell) var(--cell),
+        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0 / var(--cell) var(--cell),
+        linear-gradient(160deg, #263238 0%, #14202a 100%);
+    border-radius: 12px;
+    box-shadow:
+        inset 0 0 0 3px #2a3942,
+        0 12px 24px rgba(0, 0, 0, 0.28);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    /* 让龙头标签可以伸出格子边界 */
+    overflow: visible;
+}
+
+.snake-cell {
+    position: absolute;
+    width: var(--cell);
+    height: var(--cell);
+    transform: translate(calc(var(--x) * var(--cell)), calc(var(--y) * var(--cell)));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+}
+
+/* ---------- 龙身（青绿色鳞片，全填 cell 与相邻段无缝相连） ---------- */
+.snake-cell.body {
+    background: linear-gradient(135deg, #4db6ac 0%, #00897b 60%, #00564a 100%);
+    border-radius: 6px;
+    box-shadow:
+        inset 0 0 0 1px rgba(167, 233, 224, 0.45),
+        inset 0 -3px 6px rgba(0, 50, 40, 0.45),
+        inset 0 2px 3px rgba(178, 223, 219, 0.35);
+    width: var(--cell);
+    height: var(--cell);
+    transform: translate(calc(var(--x) * var(--cell)), calc(var(--y) * var(--cell)));
+}
+
+/* ---------- 龙尾 cell（透明底，只显扇尾本体） ---------- */
+.snake-cell.tail {
+    background: transparent;
+    width: var(--cell);
+    height: var(--cell);
+    transform: translate(calc(var(--x) * var(--cell)), calc(var(--y) * var(--cell)));
+    overflow: visible;
+    z-index: 2;
+}
+
+.dragon-tail-rotator {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: 50% 50%;
+    transition: transform 0.12s linear;
+}
+/* 默认 SVG 扇尖朝左、接合段在右；下面 dir-X 表示"上一节(身体)在该方向" */
+.dragon-tail-rotator.dir-right { transform: rotate(0deg); }
+.dragon-tail-rotator.dir-left  { transform: rotate(180deg); }
+.dragon-tail-rotator.dir-down  { transform: rotate(90deg); }
+.dragon-tail-rotator.dir-up    { transform: rotate(-90deg); }
+
+.dragon-tail-rotator > svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.4));
+}
+
+/* ---------- 龙头 cell（透明底，只显龙头本体） ---------- */
+.snake-cell.head {
+    background: transparent;
+    width: var(--cell);
+    height: var(--cell);
+    transform: translate(calc(var(--x) * var(--cell)), calc(var(--y) * var(--cell)));
+    z-index: 5;
+    overflow: visible;
+}
+
+.dragon-head-rotator {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: 50% 50%;
+    transition: transform 0.15s ease;
+}
+/* 侧面龙头默认朝右；其它方向通过翻转 / 旋转让 snout 始终指向移动方向 */
+.dragon-head-rotator.dir-right { transform: rotate(0deg); }
+.dragon-head-rotator.dir-left  { transform: scaleX(-1); }
+.dragon-head-rotator.dir-up    { transform: rotate(-90deg); }
+.dragon-head-rotator.dir-down  { transform: rotate(90deg); }
+
+.dragon-head-rotator > svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+}
+
+/* ---------- 龙头上的字 / 拼音标签（直接浮字，无框） ---------- */
+.snake-head-label {
+    position: absolute;
+    left: 50%;
+    color: #fff176;                         /* 暖金色，配龙头主题 */
+    font-weight: 600;
+    font-size: clamp(13px, 2.4vmin, 17px);
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 100;
+    letter-spacing: 0.3px;
+    /* 细描边 + 柔光，保证在任何背景下都能看清 */
+    text-shadow:
+        -1px -1px 0 #1a1a1a,
+         1px -1px 0 #1a1a1a,
+        -1px  1px 0 #1a1a1a,
+         1px  1px 0 #1a1a1a,
+         0 0 4px rgba(0, 0, 0, 0.7);
+}
+.snake-head-label.is-pinyin {
+    color: #fff59d;
+    font-style: italic;
+    font-family: "Georgia", "Times New Roman", serif;
+    font-size: clamp(14px, 2.6vmin, 18px);
+    font-weight: 500;
+}
+.snake-head-label.above {
+    bottom: 100%;
+    transform: translate(-50%, -4px);
+}
+.snake-head-label.below {
+    top: 100%;
+    transform: translate(-50%, 4px);
+}
+
+.snake-cell.food {
+    background: white;
+    color: #1565c0;
+    border-radius: 8px;
+    font-size: calc(var(--cell) * 0.55);
+    box-shadow:
+        inset 0 0 0 2px #ffd54f,
+        0 2px 4px rgba(0, 0, 0, 0.25);
+    width: calc(var(--cell) - 2px);
+    height: calc(var(--cell) - 2px);
+    transform: translate(calc(var(--x) * var(--cell) + 1px), calc(var(--y) * var(--cell) + 1px));
+    animation: snakeFoodPulse 1.6s ease-in-out infinite;
+    z-index: 2;
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+@keyframes snakeFoodPulse {
+    0%, 100% { box-shadow: inset 0 0 0 2px #ffd54f, 0 2px 4px rgba(0, 0, 0, 0.25); }
+    50%      { box-shadow: inset 0 0 0 2px #ff9800, 0 2px 8px rgba(255, 152, 0, 0.55); }
+}
+
+/* ==================== 飘字 ==================== */
+.snake-toast {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translate(-50%, -10px);
+    background: rgba(0, 0, 0, 0.78);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: clamp(13px, 2.2vmin, 16px);
+    font-weight: bold;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 10;
+    white-space: nowrap;
+}
+.snake-toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+.snake-toast.good { background: rgba(46, 125, 50, 0.9); }
+.snake-toast.bad  { background: rgba(198, 40, 40, 0.9); }
+
+/* ==================== 抖动 ==================== */
+.snake-shake { animation: snakeShake 0.22s ease-in-out; }
+@keyframes snakeShake {
+    0%, 100% { transform: translateX(0); }
+    25%      { transform: translateX(-6px); }
+    75%      { transform: translateX(6px); }
+}
+
+/* ==================== 底部按钮 ==================== */
+.snake-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* ==================== 结算 modal ==================== */
+.snake-modal .snake-end-reason {
+    color: #c62828;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+.snake-modal-btns {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: clamp(10px, 2vmin, 16px);
+}
