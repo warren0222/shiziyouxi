@@ -1,0 +1,20 @@
+# Capacitor / Node
+node_modules/
+www/
+package-lock.json
+
+# Android build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/local.properties
+android/.idea/
+android/captures/
+android/.cxx/
+android/app/.cxx/
+*.iml
+
+# 输出 APK
+*.apk
+*.aab

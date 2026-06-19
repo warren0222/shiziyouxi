@@ -51,10 +51,10 @@ function createSentenceGame({ root, onBack }) {
     // 输入
     let keyLeft = false;
     let keyRight = false;
-    let pointerActive = false;
-    let pointerId = -1;
-    let pointerX = 0;
-    let pointerY = 0;
+    let dragAimActive = false;     // 在 arena 上按住拖动调炮管时为 true
+    let dragAimPointerId = -1;
+    let dragAimLastX = 0;
+    let firePressed = false;       // 🔥 按钮按下时为 true (支持长按连发)
 
     // 舞台尺寸 (每帧 / resize 重测)
     let arenaW = 0;
@@ -246,8 +246,8 @@ function createSentenceGame({ root, onBack }) {
                 <h2>🛸 造句大作战</h2>
                 <p class="sentence-subtitle">瞄准飞碟, 按顺序击落, 连词成句!</p>
                 <ul class="sentence-rules">
-                    <li>👆 闯关: 滑动瞄准 / 点击发射 / 顺序错飞碟反击</li>
-                    <li>⚔️ 对战: 炮管锁定向上, A/D 或 ← → 移动坦克躲避飞碟自动开火</li>
+                    <li>👆 闯关: 滑屏 / ◀▶ / 键盘 A D 调炮管 · 🔥 发射</li>
+                    <li>⚔️ 对战: A/D 或 ← → 移动躲避自动开火 · 🔥 还击</li>
                     <li>✅ 击中正确飞碟: HP +1; 💔 HP 为 0 = 失败</li>
                 </ul>
                 ${hsHtml}
@@ -297,11 +297,26 @@ function createSentenceGame({ root, onBack }) {
                 </div>
             </div>
             ${gameMode === "battle" ? `
-                <div class="sentence-battle-controls" id="sentenceBattleControls">
-                    <button class="sentence-move-btn" id="sentenceMoveLeft" type="button">◀</button>
-                    <button class="sentence-move-btn" id="sentenceMoveRight" type="button">▶</button>
+                <div class="sentence-bottom-bar">
+                    <div class="sentence-battle-controls" id="sentenceBattleControls">
+                        <button class="sentence-move-btn" id="sentenceMoveLeft" type="button">◀</button>
+                        <button class="sentence-move-btn" id="sentenceMoveRight" type="button">▶</button>
+                    </div>
+                    <div class="sentence-fire-controls">
+                        <button class="sentence-fire-btn" id="sentenceFireBtn" type="button" aria-label="发射">🔥</button>
+                    </div>
                 </div>
-            ` : ""}
+            ` : `
+                <div class="sentence-bottom-bar">
+                    <div class="sentence-aim-controls" id="sentenceAimControls">
+                        <button class="sentence-aim-btn" id="sentenceAimLeft"  type="button" aria-label="炮管左转">◀</button>
+                        <button class="sentence-aim-btn" id="sentenceAimRight" type="button" aria-label="炮管右转">▶</button>
+                    </div>
+                    <div class="sentence-fire-controls">
+                        <button class="sentence-fire-btn" id="sentenceFireBtn" type="button" aria-label="发射">🔥</button>
+                    </div>
+                </div>
+            `}
         `;
         wrapper.appendChild(game);
 
@@ -346,7 +361,7 @@ function createSentenceGame({ root, onBack }) {
         document.addEventListener("keydown", onKeyDown);
         document.addEventListener("keyup", onKeyUp);
 
-        // 对战模式: 屏幕底部 ◀ ▶ 按钮
+        // 对战模式: 屏幕底部 ◀ ▶ 按钮 (移动坦克)
         if (gameMode === "battle") {
             const left = root.querySelector("#sentenceMoveLeft");
             const right = root.querySelector("#sentenceMoveRight");
@@ -364,6 +379,34 @@ function createSentenceGame({ root, onBack }) {
                 right.addEventListener("pointerleave", onMoveRightUp);
                 right.addEventListener("contextmenu", e => e.preventDefault());
             }
+        } else {
+            // 闯关模式: 屏幕底部 ◀ ▶ 瞄准按钮 (转炮管)
+            const aimL = root.querySelector("#sentenceAimLeft");
+            const aimR = root.querySelector("#sentenceAimRight");
+            if (aimL) {
+                aimL.addEventListener("pointerdown", onAimLeftDown);
+                aimL.addEventListener("pointerup", onAimLeftUp);
+                aimL.addEventListener("pointercancel", onAimLeftUp);
+                aimL.addEventListener("pointerleave", onAimLeftUp);
+                aimL.addEventListener("contextmenu", e => e.preventDefault());
+            }
+            if (aimR) {
+                aimR.addEventListener("pointerdown", onAimRightDown);
+                aimR.addEventListener("pointerup", onAimRightUp);
+                aimR.addEventListener("pointercancel", onAimRightUp);
+                aimR.addEventListener("pointerleave", onAimRightUp);
+                aimR.addEventListener("contextmenu", e => e.preventDefault());
+            }
+        }
+
+        // 🔥 发射按钮 (两种模式共用)
+        const fire = root.querySelector("#sentenceFireBtn");
+        if (fire) {
+            fire.addEventListener("pointerdown",   onFirePointerDown);
+            fire.addEventListener("pointerup",     onFirePointerUp);
+            fire.addEventListener("pointercancel", onFirePointerUp);
+            fire.addEventListener("pointerleave",  onFirePointerUp);
+            fire.addEventListener("contextmenu",   e => e.preventDefault());
         }
 
         const backBtn = root.querySelector("#sentenceBack");
@@ -396,56 +439,78 @@ function createSentenceGame({ root, onBack }) {
         tankMoveRight = false;
     }
 
+    function onAimLeftDown(e) {
+        e.preventDefault(); e.stopPropagation();
+        try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (_) {}
+        keyLeft = true;
+    }
+    function onAimLeftUp(e) {
+        if (e) { try { e.target.releasePointerCapture && e.target.releasePointerCapture(e.pointerId); } catch (_) {} }
+        keyLeft = false;
+    }
+    function onAimRightDown(e) {
+        e.preventDefault(); e.stopPropagation();
+        try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (_) {}
+        keyRight = true;
+    }
+    function onAimRightUp(e) {
+        if (e) { try { e.target.releasePointerCapture && e.target.releasePointerCapture(e.pointerId); } catch (_) {} }
+        keyRight = false;
+    }
+
+    function onFirePointerDown(e) {
+        if (!gameActive) return;
+        e.preventDefault(); e.stopPropagation();
+        try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (_) {}
+        firePressed = true;
+        tryFire();   // 按下立即发一发, 之后由 tick() 按 FIRE_INTERVAL_MS 连发
+    }
+    function onFirePointerUp(e) {
+        if (e) { try { e.target.releasePointerCapture && e.target.releasePointerCapture(e.pointerId); } catch (_) {} }
+        firePressed = false;
+    }
+
     function unbindGameControls() {
         document.removeEventListener("keydown", onKeyDown);
         document.removeEventListener("keyup", onKeyUp);
         // pointer 事件挂在 arena 上, DOM 重渲染时一并消失
     }
 
-    function pointerToArenaCoords(e) {
-        const arena = root.querySelector("#sentenceArena");
-        if (!arena) return null;
-        const rect = arena.getBoundingClientRect();
-        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    }
-
     function onPointerDown(e) {
         if (!gameActive) return;
-        const c = pointerToArenaCoords(e);
-        if (!c) return;
         if (gameMode === "battle") {
-            // 对战模式: 点击直接发射, 不参与瞄准
-            tryFire();
+            // 对战模式: 炮管锁定, arena 指针不参与任何输入 (统一用 🔥/移动按钮)
             return;
         }
-        pointerActive = true;
-        pointerId = e.pointerId;
-        pointerX = c.x;
-        pointerY = c.y;
+        // 闯关模式: 在 arena 上按住 + 相对滑动 → 调炮管角度 (不再"指哪打哪")
+        dragAimActive = true;
+        dragAimPointerId = e.pointerId;
+        dragAimLastX = e.clientX;
         try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (_) {}
-        // 点按立即发射一发 (若已过限频)
-        tryFire();
     }
     function onPointerMove(e) {
         if (!gameActive) return;
-        if (gameMode === "battle") return;   // 对战模式不需要瞄准
-        const c = pointerToArenaCoords(e);
-        if (!c) return;
-        pointerX = c.x;
-        pointerY = c.y;
-        // 即便按住状态, 也用 pointermove 持续刷新瞄准
-        if (!pointerActive) {
-            // 没按下时, 鼠标移动也更新瞄准 (桌面体验)
-            pointerActive = true;
-        }
+        if (gameMode === "battle") return;
+        if (!dragAimActive || e.pointerId !== dragAimPointerId) return;
+        const dx = e.clientX - dragAimLastX;
+        if (dx === 0) return;
+        dragAimLastX = e.clientX;
+        // 灵敏度: 约一屏 (320~400px) 划完整个角度范围 (~170°)
+        const AIM_SENS = 0.0085;   // rad/px
+        targetAngle = Math.max(
+            -ANGLE_LIMIT,
+            Math.min(ANGLE_LIMIT, targetAngle + dx * AIM_SENS)
+        );
     }
     function onPointerUp(e) {
-        if (e && e.pointerId !== undefined && e.pointerId !== pointerId) return;
-        // 不重置 pointerActive (鼠标 hover 也算瞄准源); 只是松开后不再连发
+        if (e && e.pointerId !== undefined && e.pointerId !== dragAimPointerId) return;
+        dragAimActive = false;
+        dragAimPointerId = -1;
     }
-    function onPointerLeave() {
-        // 离开舞台 → 停止鼠标瞄准 (此时回退到键盘)
-        pointerActive = false;
+    function onPointerLeave(e) {
+        if (e && e.pointerId !== undefined && e.pointerId !== dragAimPointerId) return;
+        dragAimActive = false;
+        dragAimPointerId = -1;
     }
 
     function onKeyDown(e) {
@@ -465,9 +530,9 @@ function createSentenceGame({ root, onBack }) {
         }
         // 闯关模式
         if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
-            keyLeft = true; pointerActive = false; e.preventDefault();
+            keyLeft = true; e.preventDefault();
         } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
-            keyRight = true; pointerActive = false; e.preventDefault();
+            keyRight = true; e.preventDefault();
         } else if (e.key === " " || e.key === "Spacebar") {
             tryFire(); e.preventDefault();
         }
@@ -526,8 +591,9 @@ function createSentenceGame({ root, onBack }) {
         keyRight = false;
         tankMoveLeft = false;
         tankMoveRight = false;
-        pointerActive = false;
-        pointerId = -1;
+        dragAimActive = false;
+        dragAimPointerId = -1;
+        firePressed = false;
         invincibleUntil = 0;
         nextBulletAt = 0;
         barrelAngle = 0;
@@ -723,6 +789,11 @@ function createSentenceGame({ root, onBack }) {
         /* 1. 瞄准更新 */
         updateAim(dt);
 
+        /* 1.5 长按 🔥 按钮: 持续尝试发射 (tryFire 内部按 FIRE_INTERVAL_MS 限频) */
+        if (firePressed && !inLevelTransition) {
+            tryFire();
+        }
+
         /* 2. 子弹位移 */
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
@@ -812,28 +883,16 @@ function createSentenceGame({ root, onBack }) {
             return;
         }
 
-        let newTarget = barrelAngle;
-
-        if (pointerActive) {
-            // 鼠标/触摸瞄准: 计算从坦克支点到指针的角度
-            const dx = pointerX - tankPivotX;
-            const dy = pointerY - tankPivotY;
-            // 仅在指针位于坦克上方时瞄准 (dy < 0)
-            if (dy < -10) {
-                // 角度: atan2(dx, -dy), 0 = 正上, 正 = 右偏, 负 = 左偏
-                newTarget = Math.atan2(dx, -dy);
-            }
-        } else {
-            // 键盘
-            if (keyLeft) newTarget -= KEY_TURN_RATE * dt;
-            if (keyRight) newTarget += KEY_TURN_RATE * dt;
-        }
+        // 键盘 / ◀▶ 按钮 (两者都通过 keyLeft/keyRight 驱动)
+        let newTarget = targetAngle;
+        if (keyLeft)  newTarget -= KEY_TURN_RATE * dt;
+        if (keyRight) newTarget += KEY_TURN_RATE * dt;
 
         // 钳到上半弧
         newTarget = Math.max(-ANGLE_LIMIT, Math.min(ANGLE_LIMIT, newTarget));
         targetAngle = newTarget;
 
-        // 平滑
+        // 平滑跟随
         barrelAngle += (targetAngle - barrelAngle) * BARREL_FOLLOW;
         if (barrelEl) {
             barrelEl.style.transform = `rotate(${barrelAngle}rad)`;
@@ -847,20 +906,7 @@ function createSentenceGame({ root, onBack }) {
         if (now < nextBulletAt) return;
         nextBulletAt = now + FIRE_INTERVAL_MS;
 
-        // 点按瞄准要"指哪打哪", 平滑跟随会导致首发偏离 → 发射前瞬间对齐
-        // (键盘转向时不 snap, 保留连续转动的手感)
-        if (pointerActive) {
-            const dx = pointerX - tankPivotX;
-            const dy = pointerY - tankPivotY;
-            if (dy < -10) {
-                const ang = Math.atan2(dx, -dy);
-                const clamped = Math.max(-ANGLE_LIMIT, Math.min(ANGLE_LIMIT, ang));
-                targetAngle = clamped;
-                barrelAngle = clamped;
-                if (barrelEl) barrelEl.style.transform = `rotate(${barrelAngle}rad)`;
-            }
-        }
-
+        // 不再做"指哪打哪"的 snap: 玩家自行用 ◀▶ / 键盘 / 滑屏 调好炮管再发射.
         spawnBullet();
         playFireSound();
     }

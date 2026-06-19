@@ -1,0 +1,13 @@
+{
+  "appId": "com.shiziyouxi.app",
+  "appName": "识字游戏",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}

@@ -112,16 +112,18 @@ const DRAGON_TAIL_SVG = `
 
 function createSnakeGame({ root, onBack }) {
     /* ===== 常量 ===== */
-    const COLS = 14;
-    const ROWS = 14;
+    // COLS / ROWS 在 startGame 时按视口宽高比自动选择 (竖屏拉高, 横屏拉宽).
+    let COLS = 14;
+    let ROWS = 20;
     const FOOD_COUNT = 4;          // 棋盘上同时出现的食物数量
     const INITIAL_SNAKE_LEN = 3;
-    const INITIAL_STEP_MS = 220;
+    // 触屏（手机/平板）初速度放慢一些，给孩子反应时间；桌面键盘保持原速。
+    const TOUCH = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+    const INITIAL_STEP_MS = TOUCH ? 270 : 220;
     const MIN_STEP_MS = 90;
     const SPEEDUP_EVERY = 5;       // 每吃对几个加速一次
     const SPEEDUP_FACTOR = 0.92;
     const KEY_MIN_INTERVAL = 60;   // 键盘 debounce
-    const SWIPE_THRESHOLD = 28;
     const STORAGE_KEY = "snake_highscore";
 
     /* ===== 状态 ===== */
@@ -130,7 +132,7 @@ function createSnakeGame({ root, onBack }) {
     let mode = "literacy";          // "literacy" | "word"
     let snake = [];                 // [{x,y}]，head 在 [0]
     let dir = { dx: 1, dy: 0 };
-    let queuedDir = null;
+    const dirQueue = [];            // 最长两格的方向队列，每 tick 消费 1 个
     let foods = [];                 // [{x,y,char,correct}]
     let target = null;              // 识字: {char,pinyin}；组词: {head,pinyin,partners}
     let score = 0;
@@ -229,6 +231,13 @@ function createSnakeGame({ root, onBack }) {
                          style="--cols:${COLS}; --rows:${ROWS};"></div>
                 </div>
 
+                <div class="snake-dpad" id="snakeDpad" aria-hidden="true">
+                    <button class="snake-dpad-btn up"    data-dir="up"    type="button" aria-label="上">▲</button>
+                    <button class="snake-dpad-btn left"  data-dir="left"  type="button" aria-label="左">◀</button>
+                    <button class="snake-dpad-btn down"  data-dir="down"  type="button" aria-label="下">▼</button>
+                    <button class="snake-dpad-btn right" data-dir="right" type="button" aria-label="右">▶</button>
+                </div>
+
                 <div class="snake-controls">
                     <button class="btn-secondary" id="snakeBack">← 返回</button>
                     <button class="btn-warning" id="snakePause">⏸ 暂停</button>
@@ -240,6 +249,7 @@ function createSnakeGame({ root, onBack }) {
         root.querySelector("#snakePause").addEventListener("click", togglePause);
 
         bindGridInputs();
+        bindDpad();
         bindKeyboard();
         bindResize();
         // 等下一帧让 layout 完成再算 cell 尺寸
@@ -249,11 +259,13 @@ function createSnakeGame({ root, onBack }) {
     /* ===== 启动一局 ===== */
     function startGame(chosenMode) {
         mode = chosenMode === "word" ? "word" : "literacy";
+        // 按视口宽高比决定棋盘形状, 让棋盘尽量占满竞技区.
+        chooseGridShape();
         score = 0;
         correctEaten = 0;
         stepMs = INITIAL_STEP_MS;
         dir = { dx: 1, dy: 0 };
-        queuedDir = null;
+        dirQueue.length = 0;
 
         // 蛇放在中间，朝右，3 节
         const cy = Math.floor(ROWS / 2);
@@ -296,11 +308,11 @@ function createSnakeGame({ root, onBack }) {
         if (!gameActive) return;
 
         // 应用排队的方向（防止一拍内反向）
-        if (queuedDir) {
-            if (queuedDir.dx !== -dir.dx || queuedDir.dy !== -dir.dy) {
-                dir = queuedDir;
+        if (dirQueue.length) {
+            const next = dirQueue.shift();
+            if (next.dx !== -dir.dx || next.dy !== -dir.dy) {
+                dir = next;
             }
-            queuedDir = null;
         }
 
         const head = snake[0];
@@ -654,6 +666,22 @@ function createSnakeGame({ root, onBack }) {
     }
 
     /* ===== 自适应 ===== */
+    function chooseGridShape() {
+        const w = window.innerWidth || 1024;
+        const h = window.innerHeight || 768;
+        const aspect = w / h;
+        if (aspect < 0.85) {
+            // 竖屏 (手机): 拉高
+            COLS = 14; ROWS = 20;
+        } else if (aspect > 1.25) {
+            // 横屏 (桌面): 拉宽
+            COLS = 20; ROWS = 14;
+        } else {
+            // 接近正方形 (平板)
+            COLS = 16; ROWS = 16;
+        }
+    }
+
     function fitGrid() {
         const wrap = root.querySelector("#snakeBoardWrap");
         const grid = root.querySelector("#snakeGrid");
@@ -664,7 +692,8 @@ function createSnakeGame({ root, onBack }) {
         if (availW <= 0 || availH <= 0) return;
         const byW = Math.floor(availW / COLS);
         const byH = Math.floor(availH / ROWS);
-        const cell = Math.max(20, Math.min(48, Math.min(byW, byH)));
+        // 上限 56 (比之前 48 更大), 下限 18 (略低于之前 20, 给紧凑视口留余地)
+        const cell = Math.max(18, Math.min(56, Math.min(byW, byH)));
         grid.style.setProperty("--cell", cell + "px");
     }
 
@@ -691,10 +720,12 @@ function createSnakeGame({ root, onBack }) {
 
     /* ===== 输入 ===== */
     function setQueuedDir(dx, dy) {
-        // 拒绝 180° 反向（与当前 dir 比较）
-        if (dx === -dir.dx && dy === -dir.dy) return;
-        // 也拒绝与队首相同（无意义）
-        queuedDir = { dx, dy };
+        // 跟"队尾"（或当前 dir）比较：拒 180° 反向、拒重复
+        const last = dirQueue.length ? dirQueue[dirQueue.length - 1] : dir;
+        if (dx === -last.dx && dy === -last.dy) return;
+        if (dx ===  last.dx && dy ===  last.dy) return;
+        if (dirQueue.length >= 2) dirQueue.shift();
+        dirQueue.push({ dx, dy });
     }
 
     function onKeyDown(e) {
@@ -721,30 +752,81 @@ function createSnakeGame({ root, onBack }) {
         window.removeEventListener("keydown", onKeyDown);
     }
 
-    function bindGridInputs() {
+    /* ----- 触屏：连续滑动（pointermove 边拖边触发，单次手势可多次转向） ----- */
+    function getSwipeThreshold() {
+        // 阈值随单元格大小自适应：大约 0.7 个 cell，并且不小于 16px。
         const grid = root.querySelector("#snakeGrid");
-        if (!grid) return;
-        grid.addEventListener("pointerdown", onGridPointerDown);
-        grid.addEventListener("pointerup", onGridPointerUp);
-        grid.addEventListener("pointercancel", onGridPointerCancel);
-        grid.addEventListener("touchstart", e => e.preventDefault(), { passive: false });
-        grid.addEventListener("contextmenu", e => e.preventDefault());
+        if (grid) {
+            const v = parseInt(getComputedStyle(grid).getPropertyValue("--cell"));
+            if (!isNaN(v) && v > 0) return Math.max(16, Math.round(v * 0.7));
+        }
+        return 22;
     }
-    function onGridPointerDown(e) {
+
+    function bindGridInputs() {
+        // 把监听挂到包裹层而不是 grid 本身，棋盘四周的留白也能滑。
+        const wrap = root.querySelector("#snakeBoardWrap");
+        if (!wrap) return;
+        wrap.addEventListener("pointerdown",   onSwipePointerDown);
+        wrap.addEventListener("pointermove",   onSwipePointerMove);
+        wrap.addEventListener("pointerup",     onSwipePointerEnd);
+        wrap.addEventListener("pointercancel", onSwipePointerEnd);
+        wrap.addEventListener("touchstart",    e => e.preventDefault(), { passive: false });
+        wrap.addEventListener("contextmenu",   e => e.preventDefault());
+    }
+    function onSwipePointerDown(e) {
         if (!gameActive) return;
-        swipeStart = { x: e.clientX, y: e.clientY, id: e.pointerId };
+        swipeStart = { x: e.clientX, y: e.clientY, id: e.pointerId, lastDir: null };
         try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
     }
-    function onGridPointerUp(e) {
+    function onSwipePointerMove(e) {
         if (!swipeStart || swipeStart.id !== e.pointerId) return;
         const dx = e.clientX - swipeStart.x;
         const dy = e.clientY - swipeStart.y;
-        swipeStart = null;
-        if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) return;
-        if (Math.abs(dx) > Math.abs(dy)) setQueuedDir(Math.sign(dx), 0);
-        else                              setQueuedDir(0, Math.sign(dy));
+        const TH = getSwipeThreshold();
+        if (Math.abs(dx) < TH && Math.abs(dy) < TH) return;
+
+        const nd = (Math.abs(dx) > Math.abs(dy))
+            ? { dx: Math.sign(dx), dy: 0 }
+            : { dx: 0, dy: Math.sign(dy) };
+
+        // 同一主方向连续触发的话，只保留首次；但允许"再次拖到反向阈值"产生新方向
+        if (swipeStart.lastDir
+            && nd.dx === swipeStart.lastDir.dx && nd.dy === swipeStart.lastDir.dy) {
+            return;
+        }
+        setQueuedDir(nd.dx, nd.dy);
+        swipeStart.lastDir = nd;
+        // 把参考点推到当前手指位置：下一段相对再次累计阈值才触发
+        swipeStart.x = e.clientX;
+        swipeStart.y = e.clientY;
     }
-    function onGridPointerCancel() { swipeStart = null; }
+    function onSwipePointerEnd() { swipeStart = null; }
+
+    /* ----- 触屏：屏幕 D-pad ----- */
+    const DPAD_DIRS = {
+        up:    [0, -1],
+        down:  [0,  1],
+        left:  [-1, 0],
+        right: [1,  0]
+    };
+    function onDpadPointerDown(e) {
+        if (!gameActive) return;
+        const v = DPAD_DIRS[this.dataset.dir];
+        if (!v) return;
+        e.preventDefault();
+        setQueuedDir(v[0], v[1]);
+        this.classList.add("is-active");
+    }
+    function onDpadPointerEnd() { this.classList.remove("is-active"); }
+    function bindDpad() {
+        root.querySelectorAll(".snake-dpad-btn").forEach(btn => {
+            btn.addEventListener("pointerdown",   onDpadPointerDown);
+            btn.addEventListener("pointerup",     onDpadPointerEnd);
+            btn.addEventListener("pointercancel", onDpadPointerEnd);
+            btn.addEventListener("pointerleave",  onDpadPointerEnd);
+        });
+    }
 
     /* ===== 生命周期 ===== */
     function mount() {

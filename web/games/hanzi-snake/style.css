@@ -390,6 +390,44 @@
     gap: 10px;
 }
 
+/* ==================== 屏幕 D-pad ==================== */
+/* 默认始终显示 (键盘端也能用鼠标点); 真机上的拇指操作是主要用例. */
+.snake-dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 56px);
+    grid-template-rows: repeat(2, 48px);
+    gap: 6px;
+    justify-content: center;
+    margin: 4px auto 0;
+}
+.snake-dpad-btn {
+    background: rgba(255, 255, 255, 0.94);
+    border: 2px solid #4caf50;
+    border-radius: 12px;
+    font-size: 22px;
+    font-weight: bold;
+    color: #2e7d32;
+    font-family: inherit;
+    padding: 0;
+    line-height: 1;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    transition: transform 0.08s, background 0.12s;
+    cursor: pointer;
+}
+.snake-dpad-btn.is-active,
+.snake-dpad-btn:active {
+    background: #c8e6c9;
+    transform: scale(0.94);
+}
+.snake-dpad-btn.up    { grid-column: 2; grid-row: 1; }
+.snake-dpad-btn.left  { grid-column: 1; grid-row: 2; }
+.snake-dpad-btn.down  { grid-column: 2; grid-row: 2; }
+.snake-dpad-btn.right { grid-column: 3; grid-row: 2; }
+
 /* ==================== 结算 modal ==================== */
 .snake-modal .snake-end-reason {
     color: #c62828;

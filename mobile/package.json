@@ -1,0 +1,21 @@
+{
+  "name": "shiziyouxi-mobile",
+  "version": "1.0.0",
+  "description": "shiziyouxi Android wrapper (Capacitor)",
+  "private": true,
+  "scripts": {
+    "sync": "bash scripts/sync-www.sh",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "npm run sync && npx cap sync android",
+    "build:android": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "build:android:release": "npm run cap:sync && cd android && ./gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor-community/text-to-speech": "^5.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

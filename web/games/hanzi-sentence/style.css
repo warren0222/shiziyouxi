@@ -654,22 +654,29 @@
     margin-top: 6px;
 }
 
-/* ========== 对战模式: 屏幕底部移动按钮 ========== */
+/* ========== 屏幕底部独立控件栏 (闯关 / 对战共用容器) ========== */
 
-.sentence-battle-controls {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 12px;
-    padding: 0 16px;
+.sentence-bottom-bar {
+    position: relative;
+    flex-shrink: 0;
+    height: clamp(72px, 16vw, 92px);
     display: flex;
     justify-content: space-between;
-    pointer-events: none;
+    align-items: center;
+    padding: 0 14px;
+    gap: 12px;
     z-index: 9;
 }
 
+/* ========== 对战模式: 左侧 ◀ ▶ 移动坦克 ========== */
+
+.sentence-battle-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
 .sentence-move-btn {
-    pointer-events: auto;
     width: clamp(48px, 13vw, 60px);
     height: clamp(48px, 13vw, 60px);
     border-radius: 50%;
@@ -696,5 +703,93 @@
 
 .sentence-move-btn:active {
     background: rgba(82, 225, 255, 0.5);
+    transform: scale(0.92);
+}
+
+/* ========== 🔥 发射按钮 (右侧, 闯关 / 对战共用) ========== */
+
+.sentence-fire-controls {
+    display: flex;
+    align-items: center;
+}
+
+.sentence-fire-btn {
+    width: clamp(60px, 15vw, 76px);
+    height: clamp(60px, 15vw, 76px);
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ffb74d 0%, #ff7043 55%, #c62828 100%);
+    border: 3px solid rgba(255, 255, 255, 0.85);
+    color: #fff;
+    font-size: clamp(26px, 6vw, 32px);
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow:
+        0 4px 14px rgba(255, 87, 34, 0.55),
+        inset 0 -3px 6px rgba(0, 0, 0, 0.25),
+        inset 0 2px 4px rgba(255, 255, 255, 0.4);
+    transition: transform 0.08s, box-shadow 0.12s, filter 0.12s;
+    touch-action: none;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sentence-fire-btn:hover {
+    filter: brightness(1.08);
+}
+
+.sentence-fire-btn:active {
+    transform: scale(0.92);
+    box-shadow:
+        0 2px 6px rgba(255, 87, 34, 0.55),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+        inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+
+/* ========== 闯关模式: 左侧 ◀▶ 调炮管 ========== */
+
+.sentence-aim-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.sentence-aim-btn {
+    width: clamp(48px, 13vw, 60px);
+    height: clamp(48px, 13vw, 60px);
+    border-radius: 50%;
+    background: rgba(255, 213, 79, 0.22);
+    border: 2px solid rgba(255, 213, 79, 0.7);
+    color: #ffd54f;
+    font-size: clamp(20px, 5vw, 26px);
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: background 0.1s, transform 0.1s, border-color 0.1s;
+    touch-action: none;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sentence-aim-btn:hover {
+    background: rgba(255, 213, 79, 0.32);
+    border-color: rgba(255, 213, 79, 0.9);
+}
+
+.sentence-aim-btn:active {
+    background: rgba(255, 213, 79, 0.45);
     transform: scale(0.92);
 }
