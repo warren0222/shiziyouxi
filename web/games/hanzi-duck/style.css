@@ -378,12 +378,10 @@
 .croc-jaw-top {
     transform-origin: 120px 58px;
     transition: transform 0.15s ease;
-    transform-box: fill-box;
 }
 .croc-jaw-bottom {
     transform-origin: 120px 58px;
     transition: transform 0.15s ease;
-    transform-box: fill-box;
 }
 .duck-croc.eating .croc-jaw-top   { transform: rotate(-12deg); }
 .duck-croc.eating .croc-jaw-bottom{ transform: rotate(12deg); }
@@ -444,7 +442,7 @@
     55%  { transform: translate(-4px, 1px) scale(1.05) rotate(-6deg); } /* 前倾释放 */
     100% { transform: translateY(0) scale(1) rotate(0); }
 }
-/* 弹弓手臂：后拉 → 释放前推 */
+/* 持弓手臂：保持稳定，仅做轻微蓄力 + 后坐 */
 .kid-arm {
     transform-box: fill-box;
     transform-origin: 8% 96%;   /* 约肩部 */
@@ -455,9 +453,24 @@
 }
 @keyframes armShoot {
     0%   { transform: rotate(0); }
-    30%  { transform: rotate(-18deg) translateX(-2px); }  /* 拉弓：手臂后拉 */
-    55%  { transform: rotate(22deg) translateX(3px); }    /* 释放：前推 */
+    30%  { transform: rotate(-3deg); }   /* 蓄力：弹弓略向后 */
+    55%  { transform: rotate(4deg) translateX(1px); }  /* 释放：后坐 */
     100% { transform: rotate(0); }
+}
+/* 拉弓手臂：和弹珠兜同步往后拉，再向前推送 */
+.kid-pull-arm {
+    transform-box: fill-box;
+    transform-origin: 0% 100%;   /* 左肩 */
+    transition: transform 0.12s ease;
+}
+.duck-kid.shooting .kid-pull-arm {
+    animation: pullArmShoot 0.34s ease;
+}
+@keyframes pullArmShoot {
+    0%   { transform: translate(0, 0) rotate(0); }
+    30%  { transform: translate(-3px, 3px) rotate(-4deg); }  /* 拉弓后引 */
+    55%  { transform: translate(4px, -1px) rotate(5deg); }   /* 释放前推 */
+    100% { transform: translate(0, 0) rotate(0); }
 }
 /* 弹珠兜：拉到脸侧蓄力，再弹出 */
 .duck-kid.shooting .sling-pouch {

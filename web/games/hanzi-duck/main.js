@@ -668,8 +668,10 @@ function createDuckGame({ root, onBack }) {
                                 <ellipse cx="37" cy="98" rx="6" ry="3.5" fill="#3e2723"/>
                                 <!-- 身体（上衣） -->
                                 <path d="M19 42 Q30 37 41 42 L43 76 Q30 80 17 76 Z" fill="#42a5f5" stroke="#1565c0" stroke-width="1.5"/>
-                                <!-- 左臂（自然垂下） -->
-                                <path d="M22 45 Q15 58 18 70" stroke="#ffe0b2" stroke-width="7" fill="none" stroke-linecap="round"/>
+                                <!-- 左臂（拉弓的手，端点贴在弹珠兜后） -->
+                                <g class="kid-pull-arm">
+                                    <path d="M22 45 Q31 33 47 21" stroke="#ffe0b2" stroke-width="7" fill="none" stroke-linecap="round"/>
+                                </g>
                                 <!-- 右臂 + 弹弓（可动） -->
                                 <g class="kid-arm">
                                     <path d="M39 45 Q47 41 53 37" stroke="#ffe0b2" stroke-width="7" fill="none" stroke-linecap="round"/>
