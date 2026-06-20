@@ -54,6 +54,10 @@ function createSentenceGame({ root, onBack }) {
     let dragAimActive = false;     // 在 arena 上按住拖动调炮管时为 true
     let dragAimPointerId = -1;
     let dragAimLastX = 0;
+    // 对战模式: 手指在 arena 上滑动直接 1:1 拖动坦克 (仅触摸生效, 鼠标不响应)
+    let swipeMoveActive = false;
+    let swipeMovePointerId = -1;
+    let swipeMoveLastX = 0;
     let firePressed = false;       // 🔥 按钮按下时为 true (支持长按连发)
 
     // 舞台尺寸 (每帧 / resize 重测)
@@ -479,7 +483,13 @@ function createSentenceGame({ root, onBack }) {
     function onPointerDown(e) {
         if (!gameActive) return;
         if (gameMode === "battle") {
-            // 对战模式: 炮管锁定, arena 指针不参与任何输入 (统一用 🔥/移动按钮)
+            // 对战模式: 炮管锁定, 桌面鼠标仍然不参与 arena 输入 (走 🔥/◀/▶ 按钮);
+            // 手机触摸则启用滑动 1:1 拖动坦克.
+            if (e.pointerType !== "touch") return;
+            swipeMoveActive = true;
+            swipeMovePointerId = e.pointerId;
+            swipeMoveLastX = e.clientX;
+            try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (_) {}
             return;
         }
         // 闯关模式: 在 arena 上按住 + 相对滑动 → 调炮管角度 (不再"指哪打哪")
@@ -490,7 +500,21 @@ function createSentenceGame({ root, onBack }) {
     }
     function onPointerMove(e) {
         if (!gameActive) return;
-        if (gameMode === "battle") return;
+        if (gameMode === "battle") {
+            // 对战模式: 仅触摸滑动 1:1 拖动坦克
+            if (!swipeMoveActive) return;
+            if (e.pointerId !== swipeMovePointerId) return;
+            if (e.pointerType !== "touch") return;
+            const dx = e.clientX - swipeMoveLastX;
+            if (dx === 0) return;
+            swipeMoveLastX = e.clientX;
+            tankCenterX += dx;
+            const half = tankBodyMeasuredW / 2;
+            if (tankCenterX < half + 6) tankCenterX = half + 6;
+            if (tankCenterX > arenaW - half - 6) tankCenterX = arenaW - half - 6;
+            applyTankBattlePos();
+            return;
+        }
         if (!dragAimActive || e.pointerId !== dragAimPointerId) return;
         const dx = e.clientX - dragAimLastX;
         if (dx === 0) return;
@@ -503,14 +527,28 @@ function createSentenceGame({ root, onBack }) {
         );
     }
     function onPointerUp(e) {
-        if (e && e.pointerId !== undefined && e.pointerId !== dragAimPointerId) return;
-        dragAimActive = false;
-        dragAimPointerId = -1;
+        const pid = e && e.pointerId;
+        // 闯关模式拖瞄
+        if (pid === undefined || pid === dragAimPointerId) {
+            dragAimActive = false;
+            dragAimPointerId = -1;
+        }
+        // 对战模式触摸滑动
+        if (pid === undefined || pid === swipeMovePointerId) {
+            swipeMoveActive = false;
+            swipeMovePointerId = -1;
+        }
     }
     function onPointerLeave(e) {
-        if (e && e.pointerId !== undefined && e.pointerId !== dragAimPointerId) return;
-        dragAimActive = false;
-        dragAimPointerId = -1;
+        const pid = e && e.pointerId;
+        if (pid === undefined || pid === dragAimPointerId) {
+            dragAimActive = false;
+            dragAimPointerId = -1;
+        }
+        if (pid === undefined || pid === swipeMovePointerId) {
+            swipeMoveActive = false;
+            swipeMovePointerId = -1;
+        }
     }
 
     function onKeyDown(e) {
